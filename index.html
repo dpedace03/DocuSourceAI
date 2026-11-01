@@ -1,0 +1,1583 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DocuSource AI — Documentación de código fuente (ABAP / TI)</title>
+
+  <!-- Versiones fijadas: evita que un cambio upstream rompa la app -->
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+
+  <style>
+    :focus-visible { outline: 2px solid #818cf8; outline-offset: 2px; }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #1f2937; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+
+    /* Visor Markdown */
+    .md { font-size: 13px; line-height: 1.65; color: #d1d5db; max-width: 100ch; }
+    .md h1 { font-size: 1.45rem; font-weight: 700; color: #fff; margin: 0 0 1rem; padding-bottom: .5rem; border-bottom: 1px solid #1f2937; }
+    .md h2 { font-size: 1.1rem; font-weight: 700; color: #a5b4fc; margin: 1.8rem 0 .7rem; padding-bottom: .35rem; border-bottom: 1px solid #1f2937; }
+    .md h3 { font-size: 1rem; font-weight: 600; color: #e5e7eb; margin: 1.3rem 0 .5rem; }
+    .md h4, .md h5, .md h6 { font-size: .9rem; font-weight: 600; color: #e5e7eb; margin: 1rem 0 .4rem; }
+    .md p { margin: .6rem 0; }
+    .md ul { list-style: disc; padding-left: 1.4rem; margin: .5rem 0; }
+    .md ol { list-style: decimal; padding-left: 1.5rem; margin: .5rem 0; }
+    .md li { margin: .2rem 0; }
+    .md code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .85em; background: #111827; border: 1px solid #1f2937; padding: .05rem .35rem; border-radius: .3rem; color: #c7d2fe; }
+    .md pre { background: #030712; border: 1px solid #1f2937; border-radius: .5rem; padding: .9rem; overflow: auto; margin: .8rem 0; }
+    .md pre code { background: none; border: 0; padding: 0; color: #e5e7eb; font-size: .8rem; }
+    .md .md-table { overflow-x: auto; margin: .8rem 0; }
+    .md table { border-collapse: collapse; width: 100%; font-size: 12px; }
+    .md th, .md td { border: 1px solid #1f2937; padding: .4rem .65rem; text-align: left; vertical-align: top; }
+    .md th { background: #111827; color: #e5e7eb; font-weight: 600; }
+    .md blockquote { border-left: 3px solid #4f46e5; padding: .2rem .9rem; color: #9ca3af; margin: .8rem 0; }
+    .md a { color: #818cf8; text-decoration: underline; }
+    .md hr { border: 0; border-top: 1px solid #1f2937; margin: 1.2rem 0; }
+    .md strong { color: #f3f4f6; }
+  </style>
+</head>
+<body class="bg-gray-950 text-gray-100 font-sans antialiased min-h-screen lg:h-screen flex flex-col lg:overflow-hidden">
+
+  <!-- Header -->
+  <header class="border-b border-gray-800 bg-gray-900/80 backdrop-blur px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3 shrink-0">
+    <div class="flex items-center gap-3">
+      <div class="p-2 bg-indigo-600/20 text-indigo-400 rounded-lg border border-indigo-500/30">
+        <i data-lucide="file-code-2" class="w-6 h-6"></i>
+      </div>
+      <div>
+        <h1 class="font-bold text-lg text-white leading-none">DocuSource AI</h1>
+        <p class="text-xs text-gray-400 mt-1">Documentación de código fuente estándar TI (SAP ABAP, JS, Python, SQL)</p>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2">
+      <label for="modelChoice" class="sr-only">Modelo</label>
+      <select id="modelChoice" class="bg-gray-800 border border-gray-700 text-gray-300 text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-indigo-500">
+        <option value="gemini-flash-latest">Gemini Flash (último)</option>
+        <option value="gemini-3.5-flash">Gemini 3.5 Flash</option>
+        <option value="gemini-pro-latest">Gemini Pro (último)</option>
+        <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash-Lite</option>
+        <option value="custom">Otro modelo…</option>
+      </select>
+      <input id="modelCustom" type="text" placeholder="nombre-del-modelo" aria-label="Nombre del modelo personalizado" class="hidden bg-gray-800 border border-gray-700 text-gray-300 text-xs rounded-lg px-2.5 py-1.5 w-44 font-mono focus:outline-none focus:border-indigo-500" />
+
+      <button id="btnOpenModal" type="button" class="flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-medium transition border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20">
+        <i data-lucide="key" class="w-3.5 h-3.5"></i>
+        <span id="apiKeyBtnText">Configurar API Key</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Banner de notificación -->
+  <div id="notificationBanner" role="status" aria-live="polite" class="hidden border-b px-4 py-2 text-xs flex justify-between items-center gap-3 shrink-0">
+    <span id="notificationText"></span>
+    <button id="btnCloseNotification" type="button" class="shrink-0 px-2 hover:text-white" aria-label="Cerrar aviso">✕</button>
+  </div>
+
+  <main class="flex flex-col lg:flex-row flex-1 lg:overflow-hidden lg:min-h-0">
+
+    <!-- Panel izquierdo -->
+    <section class="lg:w-1/2 border-b lg:border-b-0 lg:border-r border-gray-800 flex flex-col bg-gray-900/30 lg:min-h-0">
+
+      <div class="p-4 border-b border-gray-800 flex flex-col gap-3 shrink-0">
+        <div class="flex flex-wrap items-center gap-2">
+          <label for="nombreArchivo" class="text-xs font-semibold text-gray-400">Programa:</label>
+          <input type="text" id="nombreArchivo" value="z_crear_pedido_sd.abap" class="bg-gray-900 border border-gray-700 text-xs rounded px-2.5 py-1 text-white font-mono flex-1 min-w-[10rem] focus:outline-none focus:border-indigo-500" />
+          <div class="flex items-center gap-1">
+            <span class="text-[10px] text-gray-500 mr-1">Ejemplos:</span>
+            <button id="btnExABAP" type="button" class="px-2 py-0.5 bg-indigo-900/50 hover:bg-indigo-800 text-indigo-300 text-[10px] rounded border border-indigo-700/50 font-semibold">ABAP</button>
+            <button id="btnExJS" type="button" class="px-2 py-0.5 bg-gray-800 hover:bg-gray-700 text-gray-300 text-[10px] rounded border border-gray-700">JS</button>
+            <button id="btnExPY" type="button" class="px-2 py-0.5 bg-gray-800 hover:bg-gray-700 text-gray-300 text-[10px] rounded border border-gray-700">Python</button>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
+          <div class="flex items-center gap-2">
+            <label for="langSel" class="text-gray-400">Lenguaje:</label>
+            <select id="langSel" class="bg-gray-900 border border-gray-700 text-gray-300 rounded px-2 py-1 focus:outline-none focus:border-indigo-500">
+              <option value="auto">Detectar automáticamente</option>
+              <option value="abap">ABAP</option>
+              <option value="js">JavaScript / TypeScript</option>
+              <option value="python">Python</option>
+              <option value="sql">SQL</option>
+              <option value="otro">Otro</option>
+            </select>
+            <span id="langBadge" class="text-[10px] text-gray-500"></span>
+          </div>
+          <div id="abapOpts" class="hidden flex items-center gap-2">
+            <label for="releaseSel" class="text-gray-400">Release ABAP:</label>
+            <select id="releaseSel" class="bg-gray-900 border border-gray-700 text-gray-300 rounded px-2 py-1 focus:outline-none focus:border-indigo-500">
+              <option value="731">7.31 o inferior (sin sintaxis 7.40)</option>
+              <option value="740" selected>7.40 (ECC 6.0 EHP7/8)</option>
+              <option value="750">7.50 o superior / S/4HANA</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Drag & drop -->
+        <div id="dropZone" role="button" tabindex="0" aria-label="Seleccionar archivos de código" class="border-2 border-dashed border-gray-700 hover:border-indigo-500 rounded-lg p-3 text-center cursor-pointer bg-gray-950/40 hover:bg-gray-900/50 transition flex items-center justify-center gap-3">
+          <i data-lucide="upload-cloud" class="w-5 h-5 text-indigo-400 shrink-0"></i>
+          <div class="text-left">
+            <p class="text-xs font-medium text-gray-300">Arrastrá o seleccioná uno o varios archivos (.abap, .txt, .js, .py, .sql)</p>
+            <p class="text-[10px] text-gray-500">Varios archivos (programa + INCLUDEs) se concatenan en el orden en que los elegís</p>
+          </div>
+          <input type="file" id="fileInput" multiple class="hidden" />
+        </div>
+        <div id="fileChips" class="hidden flex flex-wrap gap-1.5"></div>
+
+        <input type="text" id="contextoAdicional" placeholder="Contexto adicional opcional (ticket Jira, módulo SAP, reglas de negocio, autor…)" aria-label="Contexto adicional" class="bg-gray-900 border border-gray-800 text-xs rounded px-3 py-1.5 text-gray-300 focus:outline-none focus:border-indigo-500" />
+
+        <label class="flex items-center gap-2 text-xs text-gray-400 cursor-pointer select-none">
+          <input type="checkbox" id="chkAnexo" checked class="accent-indigo-500" />
+          Incluir anexo de revisión de código (rendimiento, errores, riesgos)
+        </label>
+      </div>
+
+      <!-- Editor -->
+      <div class="flex-1 relative flex flex-col lg:min-h-0">
+        <div class="bg-gray-950 px-4 py-1.5 border-b border-gray-800 text-[11px] text-gray-400 flex justify-between items-center font-mono shrink-0">
+          <span>Código fuente</span>
+          <span class="flex items-center gap-3">
+            <span id="lineCount">0 líneas</span>
+            <button id="btnLimpiar" type="button" class="text-gray-500 hover:text-white underline">Limpiar</button>
+          </span>
+        </div>
+        <textarea id="codigoEditor" spellcheck="false" aria-label="Código fuente" placeholder="* Subí tus archivos ABAP o pegá tu código fuente aquí..." class="w-full flex-1 min-h-[280px] lg:min-h-0 bg-gray-950 text-gray-200 p-4 font-mono text-xs focus:outline-none resize-none custom-scrollbar leading-relaxed"></textarea>
+      </div>
+
+      <!-- Acciones -->
+      <div class="p-4 border-t border-gray-800 bg-gray-900/50 flex flex-wrap gap-2 shrink-0">
+        <button id="btnAnalizar" type="button" class="flex-1 min-w-[12rem] py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-lg font-medium text-xs flex items-center justify-center gap-2 transition shadow-lg shadow-indigo-600/20">
+          <i data-lucide="sparkles" class="w-4 h-4"></i>
+          <span id="btnAnalizarText">Analizar y generar documentación</span>
+        </button>
+        <button id="btnLocal" type="button" title="Genera la documentación sin IA, solo con análisis estático local" class="py-2.5 px-4 bg-gray-800 hover:bg-gray-700 disabled:opacity-60 disabled:cursor-not-allowed text-gray-200 border border-gray-700 rounded-lg font-medium text-xs transition">
+          Solo análisis local
+        </button>
+        <button id="btnCancelar" type="button" class="hidden py-2.5 px-4 bg-red-900/60 hover:bg-red-800 text-red-100 border border-red-700/60 rounded-lg font-medium text-xs transition">
+          Cancelar
+        </button>
+      </div>
+    </section>
+
+    <!-- Panel derecho -->
+    <section class="lg:w-1/2 flex flex-col bg-gray-900/10 min-h-[420px] lg:min-h-0">
+
+      <div class="min-h-12 border-b border-gray-800 px-4 py-2 flex flex-wrap items-center justify-between gap-2 bg-gray-900/50 shrink-0">
+        <div class="flex gap-2">
+          <button id="tabDoc" type="button" class="px-3 py-1.5 rounded-md text-xs font-medium transition flex items-center gap-1.5 bg-indigo-600/20 text-indigo-400 border border-indigo-500/30">
+            <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+            <span>Documentación técnica</span>
+          </button>
+          <button id="tabHistorial" type="button" class="px-3 py-1.5 rounded-md text-xs font-medium transition flex items-center gap-1.5 text-gray-400 hover:text-white border border-transparent">
+            <i data-lucide="history" class="w-3.5 h-3.5"></i>
+            <span>Historial (<span id="historialCount">0</span>)</span>
+          </button>
+        </div>
+
+        <div id="docActions" class="hidden flex items-center gap-2">
+          <div class="flex rounded-md overflow-hidden border border-gray-700 text-[11px]">
+            <button id="btnVista" type="button" class="px-2.5 py-1 bg-indigo-600/30 text-indigo-200">Vista</button>
+            <button id="btnRaw" type="button" class="px-2.5 py-1 text-gray-400 hover:text-white">Markdown</button>
+          </div>
+          <button id="btnCopy" type="button" class="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded transition" title="Copiar Markdown" aria-label="Copiar Markdown">
+            <i data-lucide="copy" class="w-4 h-4"></i>
+          </button>
+          <button id="btnDownload" type="button" class="p-1.5 bg-indigo-600/20 text-indigo-400 hover:bg-indigo-600/30 border border-indigo-500/30 rounded transition" title="Descargar .md" aria-label="Descargar .md">
+            <i data-lucide="download" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="flex-1 overflow-y-auto p-6 custom-scrollbar lg:min-h-0">
+        <div id="viewDoc" class="h-full">
+          <div id="docPlaceholder" class="h-full min-h-[240px] flex flex-col items-center justify-center text-gray-500 gap-3">
+            <div class="p-4 bg-gray-900 rounded-full border border-gray-800">
+              <i data-lucide="file-badge-2" class="w-8 h-8 text-gray-600"></i>
+            </div>
+            <p class="text-xs text-center max-w-xs">
+              Subí o pegá código fuente a la izquierda y presioná<br />
+              <strong class="text-gray-400">“Analizar y generar documentación”</strong>.
+            </p>
+          </div>
+          <article id="docRender" class="md hidden"></article>
+          <pre id="docRaw" class="hidden bg-gray-950 border border-gray-800 p-4 rounded-lg text-gray-200 font-mono text-xs whitespace-pre-wrap leading-relaxed"></pre>
+        </div>
+
+        <div id="viewHistorial" class="hidden">
+          <div class="flex items-center justify-between mb-3">
+            <p class="text-xs text-gray-500">Se guardan las últimas 30 documentaciones en este navegador.</p>
+            <button id="btnClearHist" type="button" class="hidden text-xs text-red-400 hover:text-red-300 underline">Borrar todo</button>
+          </div>
+          <div id="historialContainer" class="space-y-3"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal API Key -->
+  <div id="modalApiKey" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="bg-gray-900 border border-gray-800 rounded-xl max-w-md w-full p-6 shadow-2xl">
+      <div class="flex items-center justify-between mb-4">
+        <h2 id="modalTitle" class="flex items-center gap-2 text-white font-bold text-sm">
+          <i data-lucide="key" class="w-4 h-4 text-indigo-400"></i>
+          <span>Configurar Gemini API Key</span>
+        </h2>
+        <button id="btnCloseModal" type="button" class="text-gray-400 hover:text-white" aria-label="Cerrar">✕</button>
+      </div>
+
+      <p class="text-xs text-gray-400 mb-3 leading-relaxed">
+        Generá tu clave en Google AI Studio. Se guarda solo en este navegador.
+      </p>
+      <p class="text-xs text-amber-300/90 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2 mb-4 leading-relaxed">
+        El código fuente que analices se envía a la API de Google Gemini. Si es código confidencial, revisá las condiciones de datos de tu plan antes de usarlo.
+      </p>
+
+      <div class="space-y-4">
+        <div>
+          <label for="inputApiKey" class="block text-[11px] text-gray-400 mb-1">Clave de API</label>
+          <input type="password" id="inputApiKey" autocomplete="off" placeholder="AIza..." class="w-full bg-gray-950 border border-gray-800 rounded-lg px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-indigo-500" />
+        </div>
+        <label class="flex items-center gap-2 text-xs text-gray-400 cursor-pointer select-none">
+          <input type="checkbox" id="chkRecordar" checked class="accent-indigo-500" />
+          Recordar la clave en este navegador (si no, se borra al cerrar la pestaña)
+        </label>
+
+        <div class="flex flex-wrap justify-between gap-2 pt-2">
+          <button id="btnQuitarKey" type="button" class="px-4 py-2 text-red-400 hover:text-red-300 rounded-lg text-xs">Quitar clave</button>
+          <div class="flex gap-2">
+            <button id="btnCancelModal" type="button" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-xs">Cancelar</button>
+            <button id="btnSaveApiKey" type="button" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-medium">Guardar clave</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (() => {
+    'use strict';
+
+    /* =====================================================================
+     *  CONSTANTES Y UTILIDADES
+     * ===================================================================== */
+    const K_API = 'gemini_api_key', K_HIST = 'docusource_history', K_SET = 'docusource_settings';
+    const MAX_HIST = 30, MAX_FILE = 3 * 1024 * 1024, WARN_CHARS = 900000, TIMEOUT_MS = 240000;
+    const LANG_LABEL = { abap: 'ABAP', js: 'JavaScript / TypeScript', python: 'Python', sql: 'SQL', otro: 'Otro' };
+    const RELEASE_LABEL = { '731': '7.31 o inferior', '740': '7.40 (ECC 6.0 EHP7/8)', '750': '7.50 o superior / S/4HANA' };
+    const ND = 'No determinable a partir del código.';
+
+    const $ = id => document.getElementById(id);
+    const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+    const uniq = a => [...new Set(a)];
+    const escRe = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const C = s => '\u0060' + String(s) + '\u0060';
+    const cell = s => String(s == null || s === '' ? '—' : s).replace(/\|/g, '\\|').replace(/\r?\n/g, ' ');
+    const tabla = (heads, rows) => rows.length
+      ? '| ' + heads.join(' | ') + ' |\n|' + heads.map(() => '---').join('|') + '|\n' + rows.map(r => '| ' + r.map(cell).join(' | ') + ' |').join('\n') + '\n'
+      : '';
+    const lista = items => items.map(i => '- ' + i).join('\n') + '\n';
+
+    /* ---- Almacenamiento seguro (nunca lanza) ---- */
+    const store = {
+      get(k, f = null) { try { const v = localStorage.getItem(k); return v === null ? f : v; } catch { return f; } },
+      set(k, v) { try { localStorage.setItem(k, v); return true; } catch { return false; } },
+      del(k) { try { localStorage.removeItem(k); } catch { /* noop */ } }
+    };
+    const session = {
+      get(k) { try { return sessionStorage.getItem(k); } catch { return null; } },
+      set(k, v) { try { sessionStorage.setItem(k, v); return true; } catch { return false; } },
+      del(k) { try { sessionStorage.removeItem(k); } catch { /* noop */ } }
+    };
+    const readJSON = (k, fb) => { try { const v = JSON.parse(store.get(k, 'null')); return v == null ? fb : v; } catch { return fb; } };
+
+    /* =====================================================================
+     *  REFERENCIAS DOM
+     * ===================================================================== */
+    const editor = $('codigoEditor'), nombre = $('nombreArchivo'), contexto = $('contextoAdicional');
+    const lineCount = $('lineCount'), dropZone = $('dropZone'), fileInput = $('fileInput'), fileChips = $('fileChips');
+    const langSel = $('langSel'), langBadge = $('langBadge'), abapOpts = $('abapOpts'), releaseSel = $('releaseSel'), chkAnexo = $('chkAnexo');
+    const modelChoice = $('modelChoice'), modelCustom = $('modelCustom');
+    const btnAnalizar = $('btnAnalizar'), btnAnalizarText = $('btnAnalizarText'), btnLocal = $('btnLocal'), btnCancelar = $('btnCancelar');
+    const docPlaceholder = $('docPlaceholder'), docRender = $('docRender'), docRaw = $('docRaw'), docActions = $('docActions');
+    const tabDoc = $('tabDoc'), tabHistorial = $('tabHistorial'), viewDoc = $('viewDoc'), viewHistorial = $('viewHistorial');
+    const historialContainer = $('historialContainer'), historialCount = $('historialCount'), btnClearHist = $('btnClearHist');
+    const modalApiKey = $('modalApiKey'), inputApiKey = $('inputApiKey'), chkRecordar = $('chkRecordar');
+    const apiKeyBtnText = $('apiKeyBtnText'), btnOpenModal = $('btnOpenModal');
+    const btnVista = $('btnVista'), btnRaw = $('btnRaw');
+
+    /* =====================================================================
+     *  NOTIFICACIONES
+     * ===================================================================== */
+    let notifTimer = null;
+    function notify(msg, type = 'info') {
+      const b = $('notificationBanner');
+      const colors = {
+        success: 'bg-emerald-900/80 border-emerald-700 text-emerald-200',
+        warning: 'bg-amber-900/80 border-amber-700 text-amber-200',
+        error: 'bg-red-900/80 border-red-700 text-red-200',
+        info: 'bg-sky-900/70 border-sky-700 text-sky-200'
+      };
+      b.className = 'border-b px-4 py-2 text-xs flex justify-between items-center gap-3 shrink-0 ' + (colors[type] || colors.info);
+      $('notificationText').textContent = msg;
+      clearTimeout(notifTimer);
+      if (type === 'success' || type === 'info') notifTimer = setTimeout(() => b.classList.add('hidden'), 7000);
+    }
+    $('btnCloseNotification').addEventListener('click', () => $('notificationBanner').classList.add('hidden'));
+
+    /* =====================================================================
+     *  AJUSTES
+     * ===================================================================== */
+    const defaults = { model: 'gemini-flash-latest', custom: '', lang: 'auto', release: '740', anexo: true };
+    const ajustes = Object.assign({}, defaults, readJSON(K_SET, {}));
+    function guardarAjustes() {
+      ajustes.model = modelChoice.value; ajustes.custom = modelCustom.value.trim();
+      ajustes.lang = langSel.value; ajustes.release = releaseSel.value; ajustes.anexo = chkAnexo.checked;
+      store.set(K_SET, JSON.stringify(ajustes));
+    }
+    function aplicarAjustes() {
+      if ([...modelChoice.options].some(o => o.value === ajustes.model)) modelChoice.value = ajustes.model;
+      modelCustom.value = ajustes.custom || '';
+      modelCustom.classList.toggle('hidden', modelChoice.value !== 'custom');
+      if ([...langSel.options].some(o => o.value === ajustes.lang)) langSel.value = ajustes.lang;
+      if ([...releaseSel.options].some(o => o.value === ajustes.release)) releaseSel.value = ajustes.release;
+      chkAnexo.checked = !!ajustes.anexo;
+    }
+    modelChoice.addEventListener('change', () => { modelCustom.classList.toggle('hidden', modelChoice.value !== 'custom'); guardarAjustes(); });
+    [modelCustom, langSel, releaseSel, chkAnexo].forEach(e => e.addEventListener('change', guardarAjustes));
+
+    function modeloActual() {
+      const m = modelChoice.value === 'custom' ? modelCustom.value.trim() : modelChoice.value;
+      return /^[\w.\-/]+$/.test(m) ? m : '';
+    }
+
+    /* =====================================================================
+     *  API KEY
+     * ===================================================================== */
+    const limpiarKey = v => v.trim().replace(/^["']+|["']+$/g, '').replace(/\s+/g, '');
+    const obtenerKey = () => session.get(K_API) || store.get(K_API, '') || '';
+    function actualizarKeyUI() {
+      const has = !!obtenerKey();
+      apiKeyBtnText.textContent = has ? 'API Key guardada' : 'Configurar API Key';
+      btnOpenModal.className = 'flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-medium transition ' + (has
+        ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'
+        : 'border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20');
+    }
+    function abrirModal() { inputApiKey.value = obtenerKey(); modalApiKey.classList.remove('hidden'); setTimeout(() => inputApiKey.focus(), 0); }
+    function cerrarModal() { modalApiKey.classList.add('hidden'); btnOpenModal.focus(); }
+    function guardarKey() {
+      const k = limpiarKey(inputApiKey.value);
+      store.del(K_API); session.del(K_API);
+      if (k) { if (chkRecordar.checked) store.set(K_API, k); else session.set(K_API, k); }
+      actualizarKeyUI(); cerrarModal();
+      notify(k ? 'API Key guardada correctamente.' : 'API Key eliminada.', k ? 'success' : 'info');
+    }
+    btnOpenModal.addEventListener('click', abrirModal);
+    $('btnCloseModal').addEventListener('click', cerrarModal);
+    $('btnCancelModal').addEventListener('click', cerrarModal);
+    $('btnSaveApiKey').addEventListener('click', guardarKey);
+    $('btnQuitarKey').addEventListener('click', () => { inputApiKey.value = ''; guardarKey(); });
+    inputApiKey.addEventListener('keydown', e => { if (e.key === 'Enter') guardarKey(); });
+    modalApiKey.addEventListener('click', e => { if (e.target === modalApiKey) cerrarModal(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !modalApiKey.classList.contains('hidden')) cerrarModal(); });
+
+    /* =====================================================================
+     *  DETECCIÓN DE LENGUAJE
+     * ===================================================================== */
+    function detectarLenguaje(code, name) {
+      const n = (name || '').toLowerCase();
+      if (/\.abap$|\.(clas|prog|fugr|intf)\.abap$/.test(n)) return 'abap';
+      const ext = n.includes('.') ? n.split('.').pop() : '';
+      if (['js', 'mjs', 'cjs', 'jsx', 'ts', 'tsx'].includes(ext)) return 'js';
+      if (ext === 'py') return 'python';
+      if (ext === 'sql') return 'sql';
+      const t = code.slice(0, 60000);
+      if (/^\s*(REPORT|PROGRAM|FUNCTION-POOL)\s+\w/im.test(t) || /^\s*(FORM\s+\w+|CLASS\s+\w+\s+DEFINITION|START-OF-SELECTION|SELECT-OPTIONS|PARAMETERS)\b/im.test(t)
+        || /\b(ENDFORM|ENDMETHOD|ENDCLASS|ENDLOOP|ENDIF|ENDFUNCTION)\s*\./i.test(t)) return 'abap';
+      if (/^\s*def\s+\w+\(.*\)\s*:/m.test(t) || /^\s*(from\s+[\w.]+\s+import|import\s+\w+\s*$)/m.test(t)) return 'python';
+      if (/\b(const|let|var)\s+\w+\s*=|\bfunction\s+\w+\s*\(|=>\s*[{(]|require\(|^\s*import\s.+from\s/m.test(t)) return 'js';
+      if (/^\s*(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|WITH)\b[\s\S]*\b(FROM|INTO|TABLE|SET|VALUES)\b/i.test(t)) return 'sql';
+      return 'otro';
+    }
+    const langEfectivo = () => langSel.value === 'auto' ? detectarLenguaje(editor.value, nombre.value) : langSel.value;
+    function refrescarLang() {
+      const l = langEfectivo();
+      langBadge.textContent = langSel.value === 'auto' && editor.value.trim() ? 'Detectado: ' + LANG_LABEL[l] : '';
+      abapOpts.classList.toggle('hidden', l !== 'abap');
+    }
+    let langTimer = null;
+    const refrescarLangDebounced = () => { clearTimeout(langTimer); langTimer = setTimeout(refrescarLang, 250); };
+
+    /* =====================================================================
+     *  EDITOR, CONTADOR Y ARCHIVOS
+     * ===================================================================== */
+    function actualizarContador() {
+      const v = editor.value, n = v ? v.split('\n').length : 0;
+      lineCount.textContent = n.toLocaleString('es-AR') + (n === 1 ? ' línea' : ' líneas') + ' · ' + v.length.toLocaleString('es-AR') + ' caracteres';
+      lineCount.className = v.length > WARN_CHARS ? 'text-amber-400' : '';
+    }
+    function limpiarChips() { fileChips.innerHTML = ''; fileChips.classList.add('hidden'); }
+    editor.addEventListener('input', () => { actualizarContador(); refrescarLangDebounced(); limpiarChips(); });
+    nombre.addEventListener('input', refrescarLangDebounced);
+    langSel.addEventListener('change', refrescarLang);
+    $('btnLimpiar').addEventListener('click', () => { editor.value = ''; limpiarChips(); actualizarContador(); refrescarLang(); editor.focus(); });
+
+    async function leerArchivo(file) {
+      const buf = await file.arrayBuffer();
+      try { return { text: new TextDecoder('utf-8', { fatal: true }).decode(buf).replace(/^\uFEFF/, ''), enc: 'UTF-8' }; }
+      catch { return { text: new TextDecoder('windows-1252').decode(buf), enc: 'Windows-1252' }; }
+    }
+
+    async function cargarArchivos(fileList) {
+      const files = Array.from(fileList || []);
+      if (!files.length) return;
+      const leidos = [], omitidos = [];
+      for (const f of files) {
+        if (f.size > MAX_FILE) { omitidos.push(f.name + ' (supera 3 MB)'); continue; }
+        try {
+          const r = await leerArchivo(f);
+          if (r.text.includes('\u0000')) { omitidos.push(f.name + ' (parece binario)'); continue; }
+          leidos.push({ name: f.name, text: r.text, enc: r.enc });
+        } catch { omitidos.push(f.name + ' (error de lectura)'); }
+      }
+      if (!leidos.length) { notify('No se pudo leer ningún archivo: ' + omitidos.join(', '), 'error'); return; }
+
+      if (leidos.length === 1) {
+        nombre.value = leidos[0].name;
+        editor.value = leidos[0].text;
+      } else {
+        const first = leidos[0].name, dot = first.lastIndexOf('.');
+        nombre.value = (dot > 0 ? first.slice(0, dot) : first) + '_paquete' + (dot > 0 ? first.slice(dot) : '');
+        editor.value = leidos.map((f, i) =>
+          '######## ARCHIVO [' + (i + 1) + '/' + leidos.length + ']: ' + f.name + ' ########\n\n' + f.text.replace(/\s+$/, '')
+        ).join('\n\n');
+      }
+      fileChips.innerHTML = '';
+      leidos.forEach((f, i) => fileChips.appendChild(el('span', 'text-[10px] font-mono bg-gray-800 border border-gray-700 text-gray-300 rounded px-2 py-0.5',
+        (leidos.length > 1 ? (i + 1) + '. ' : '') + f.name + ' · ' + f.text.split('\n').length + ' líneas')));
+      fileChips.classList.remove('hidden');
+      actualizarContador(); refrescarLang();
+
+      const avisos = [];
+      if (leidos.length > 1) avisos.push('Se concatenaron ' + leidos.length + ' archivos en el orden seleccionado.');
+      const w = leidos.filter(f => f.enc !== 'UTF-8').map(f => f.name);
+      if (w.length) avisos.push('Se decodificó como Windows-1252: ' + w.join(', ') + '.');
+      if (omitidos.length) avisos.push('Omitidos: ' + omitidos.join(', ') + '.');
+      if (avisos.length) notify(avisos.join(' '), omitidos.length ? 'warning' : 'success');
+    }
+
+    dropZone.addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); } });
+    fileInput.addEventListener('change', async e => { await cargarArchivos(e.target.files); fileInput.value = ''; });
+
+    const tieneArchivos = e => e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files');
+    window.addEventListener('dragover', e => { if (tieneArchivos(e)) e.preventDefault(); });
+    window.addEventListener('drop', e => { if (tieneArchivos(e)) e.preventDefault(); });
+    [[dropZone, ['border-indigo-500', 'bg-gray-900/70']], [editor, ['ring-2', 'ring-indigo-500']]].forEach(([target, cls]) => {
+      target.addEventListener('dragover', e => { if (tieneArchivos(e)) { e.preventDefault(); target.classList.add(...cls); } });
+      target.addEventListener('dragleave', () => target.classList.remove(...cls));
+      target.addEventListener('drop', e => { target.classList.remove(...cls); if (!tieneArchivos(e)) return; e.preventDefault(); cargarArchivos(e.dataTransfer.files); });
+    });
+
+    /* =====================================================================
+     *  EJEMPLOS
+     * ===================================================================== */
+    const EJEMPLOS = {
+      abap: { name: 'z_crear_pedido_sd.abap', code: `*&---------------------------------------------------------------------*
+*& Report  Z_CREAR_PEDIDO_SD
+*&---------------------------------------------------------------------*
+*& Descripción : Alta de pedidos de venta (SD) mediante BAPI
+*& Autor       : Equipo SD
+*& Fecha       : 15.03.2025
+*& Ticket      : SD-1234
+*& Módulo      : SD
+*&---------------------------------------------------------------------*
+*& Historial de cambios
+*& 15.03.2025  EQSD  SD-1234  Versión inicial
+*& 02.04.2025  EQSD  SD-1301  Validación de autorización por org. ventas
+*&---------------------------------------------------------------------*
+REPORT z_crear_pedido_sd.
+
+TABLES: vbak, vbap.
+
+CONSTANTS: gc_doc_type TYPE auart VALUE 'TA'.
+
+TYPES: BEGIN OF ty_item,
+         matnr TYPE matnr,
+         menge TYPE kwmeng,
+       END OF ty_item.
+
+DATA: gt_items  TYPE STANDARD TABLE OF ty_item,
+      gt_return TYPE STANDARD TABLE OF bapiret2.
+
+PARAMETERS: p_vkorg TYPE vkorg OBLIGATORY DEFAULT '1000',
+            p_kunnr TYPE kunnr OBLIGATORY,
+            p_test  AS CHECKBOX DEFAULT 'X'.
+SELECT-OPTIONS: s_matnr FOR vbap-matnr.
+
+AT SELECTION-SCREEN.
+  PERFORM validar_autorizacion.
+
+START-OF-SELECTION.
+  PERFORM obtener_materiales.
+  PERFORM crear_pedido.
+  PERFORM mostrar_resultado.
+
+*&---------------------------------------------------------------------*
+FORM validar_autorizacion.
+  AUTHORITY-CHECK OBJECT 'V_VBAK_VKO'
+    ID 'VKORG' FIELD p_vkorg
+    ID 'ACTVT' FIELD '01'.
+  IF sy-subrc <> 0.
+    MESSAGE e001(zsd) WITH p_vkorg.
+  ENDIF.
+ENDFORM.
+
+*&---------------------------------------------------------------------*
+FORM obtener_materiales.
+  SELECT matnr kwmeng
+    FROM vbap
+    INTO TABLE gt_items
+    UP TO 50 ROWS
+    WHERE matnr IN s_matnr.
+  IF sy-subrc <> 0.
+    MESSAGE s002(zsd) DISPLAY LIKE 'W'.
+    STOP.
+  ENDIF.
+ENDFORM.
+
+*&---------------------------------------------------------------------*
+FORM crear_pedido.
+  DATA: ls_header  TYPE bapisdhd1,
+        ls_headerx TYPE bapisdhd1x,
+        lt_partner TYPE STANDARD TABLE OF bapiparnr,
+        ls_partner TYPE bapiparnr,
+        lt_item    TYPE STANDARD TABLE OF bapisditm,
+        ls_item    TYPE bapisditm,
+        lv_vbeln   TYPE vbeln_va,
+        lv_error   TYPE abap_bool.
+  FIELD-SYMBOLS: <fs_item> TYPE ty_item.
+
+  ls_header-doc_type    = gc_doc_type.
+  ls_header-sales_org   = p_vkorg.
+  ls_headerx-updateflag = 'I'.
+  ls_headerx-doc_type   = abap_true.
+  ls_headerx-sales_org  = abap_true.
+
+  ls_partner-partn_role = 'AG'.
+  ls_partner-partn_numb = p_kunnr.
+  APPEND ls_partner TO lt_partner.
+
+  LOOP AT gt_items ASSIGNING <fs_item>.
+    ls_item-itm_number = sy-tabix * 10.
+    ls_item-material   = <fs_item>-matnr.
+    ls_item-target_qty = <fs_item>-menge.
+    APPEND ls_item TO lt_item.
+  ENDLOOP.
+
+  CALL FUNCTION 'BAPI_SALESORDER_CREATEFROMDAT2'
+    EXPORTING
+      order_header_in  = ls_header
+      order_header_inx = ls_headerx
+      testrun          = p_test
+    IMPORTING
+      salesdocument    = lv_vbeln
+    TABLES
+      return           = gt_return
+      order_items_in   = lt_item
+      order_partners   = lt_partner.
+
+  LOOP AT gt_return TRANSPORTING NO FIELDS WHERE type CA 'EA'.
+    lv_error = abap_true.
+    EXIT.
+  ENDLOOP.
+
+  IF lv_error = abap_true OR p_test = abap_true.
+    CALL FUNCTION 'BAPI_TRANSACTION_ROLLBACK'.
+  ELSE.
+    CALL FUNCTION 'BAPI_TRANSACTION_COMMIT'
+      EXPORTING
+        wait = abap_true.
+  ENDIF.
+ENDFORM.
+
+*&---------------------------------------------------------------------*
+FORM mostrar_resultado.
+  LOOP AT gt_return INTO DATA(ls_ret).
+    WRITE: / ls_ret-type, ls_ret-message.
+  ENDLOOP.
+ENDFORM.` },
+      js: { name: 'auth.js', code: `const jwt = require('jsonwebtoken');
+
+const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1h';
+
+function generarToken(usuario) {
+  if (!JWT_SECRET) throw new Error('JWT_SECRET no configurado');
+  const payload = { sub: usuario.id, rol: usuario.rol };
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+}
+
+function verificarToken(req, res, next) {
+  const header = req.headers['authorization'] || '';
+  const token = header.startsWith('Bearer ') ? header.slice(7) : null;
+  if (!token) return res.status(401).json({ error: 'Token ausente' });
+  try {
+    req.usuario = jwt.verify(token, JWT_SECRET);
+    next();
+  } catch (err) {
+    console.error('Token inválido:', err.message);
+    return res.status(401).json({ error: 'Token inválido o expirado' });
+  }
+}
+
+module.exports = { generarToken, verificarToken };` },
+      py: { name: 'impuestos.py', code: `import logging
+import os
+
+logger = logging.getLogger(__name__)
+
+IVA_GENERAL = float(os.getenv("IVA_GENERAL", "0.21"))
+IVA_REDUCIDO = 0.105
+
+
+def calcular_impuesto(importe, tipo="general"):
+    """Calcula el IVA de un importe neto."""
+    if importe < 0:
+        logger.error("Importe negativo: %s", importe)
+        raise ValueError("El importe no puede ser negativo")
+    alicuota = IVA_REDUCIDO if tipo == "reducido" else IVA_GENERAL
+    impuesto = round(importe * alicuota, 2)
+    logger.info("IVA calculado: %s sobre %s", impuesto, importe)
+    return impuesto` }
+    };
+    function cargarEjemplo(k) {
+      nombre.value = EJEMPLOS[k].name; editor.value = EJEMPLOS[k].code;
+      langSel.value = 'auto'; limpiarChips(); actualizarContador(); refrescarLang(); guardarAjustes();
+    }
+    $('btnExABAP').addEventListener('click', () => cargarEjemplo('abap'));
+    $('btnExJS').addEventListener('click', () => cargarEjemplo('js'));
+    $('btnExPY').addEventListener('click', () => cargarEjemplo('py'));
+
+    /* =====================================================================
+     *  RENDERIZADOR MARKDOWN (seguro: todo se escapa antes de generar HTML)
+     * ===================================================================== */
+    const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    function inline(s) {
+      const codes = [];
+      s = String(s).replace(/`([^`]+)`/g, (_, c) => { codes.push(c); return '\u0000' + (codes.length - 1) + '\u0000'; });
+      s = esc(s).replace(/&lt;br\s*\/?&gt;/gi, '<br>');
+      s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+      s = s.replace(/(^|[^*])\*([^*\s][^*]*)\*(?!\*)/g, '$1<em>$2</em>');
+      s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+      return s.replace(/\u0000(\d+)\u0000/g, (_, i) => '<code>' + esc(codes[i]) + '</code>');
+    }
+    function splitRow(line) {
+      let s = line.trim();
+      if (s.startsWith('|')) s = s.slice(1);
+      if (s.endsWith('|') && !s.endsWith('\\|')) s = s.slice(0, -1);
+      const cells = []; let cur = '', bt = false;
+      for (let i = 0; i < s.length; i++) {
+        const c = s[i];
+        if (c === '\\' && s[i + 1] === '|') { cur += '|'; i++; continue; }
+        if (c === '`') { bt = !bt; cur += c; continue; }
+        if (c === '|' && !bt) { cells.push(cur.trim()); cur = ''; continue; }
+        cur += c;
+      }
+      cells.push(cur.trim());
+      return cells;
+    }
+    function renderList(items) {
+      let html = '';
+      const stack = [];
+      for (const it of items) {
+        while (stack.length && it.indent < stack[stack.length - 1].indent) html += '</li></' + stack.pop().tag + '>';
+        const tag = it.ordered ? 'ol' : 'ul';
+        if (!stack.length || it.indent > stack[stack.length - 1].indent) { html += '<' + tag + '>'; stack.push({ indent: it.indent, tag }); }
+        else html += '</li>';
+        html += '<li>' + inline(it.text);
+      }
+      while (stack.length) html += '</li></' + stack.pop().tag + '>';
+      return html;
+    }
+    const SEP = /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/;
+    const HR = /^\s*([-*_])(?:\s*\1){2,}\s*$/;
+    function renderMarkdown(md) {
+      const lines = String(md).replace(/\r\n?/g, '\n').split('\n');
+      const out = [];
+      let i = 0;
+      const isRow = l => /^\s*\|.*\|\s*$/.test(l);
+      const isTableStart = k => k + 1 < lines.length && isRow(lines[k]) && SEP.test(lines[k + 1]);
+      const isList = l => /^(\s*)([-*+]|\d+[.)])\s+\S/.test(l);
+      const isBlock = k => { const l = lines[k]; return /^\s*```/.test(l) || /^#{1,6}\s/.test(l) || HR.test(l) || isList(l) || isTableStart(k) || /^\s*>/.test(l); };
+      while (i < lines.length) {
+        const line = lines[i];
+        if (/^\s*```/.test(line)) {
+          const buf = []; i++;
+          while (i < lines.length && !/^\s*```\s*$/.test(lines[i])) { buf.push(lines[i]); i++; }
+          i++;
+          out.push('<pre><code>' + esc(buf.join('\n')) + '</code></pre>');
+          continue;
+        }
+        if (!line.trim()) { i++; continue; }
+        let m = line.match(/^(#{1,6})\s+(.*)$/);
+        if (m) { out.push('<h' + m[1].length + '>' + inline(m[2].trim()) + '</h' + m[1].length + '>'); i++; continue; }
+        if (HR.test(line)) { out.push('<hr>'); i++; continue; }
+        if (isTableStart(i)) {
+          const head = splitRow(lines[i]); i += 2;
+          const rows = [];
+          while (i < lines.length && isRow(lines[i])) { rows.push(splitRow(lines[i])); i++; }
+          out.push('<div class="md-table"><table><thead><tr>' + head.map(h => '<th>' + inline(h) + '</th>').join('') + '</tr></thead><tbody>'
+            + rows.map(r => '<tr>' + head.map((_, k) => '<td>' + inline(r[k] == null ? '' : r[k]) + '</td>').join('') + '</tr>').join('')
+            + '</tbody></table></div>');
+          continue;
+        }
+        if (/^\s*>/.test(line)) {
+          const buf = [];
+          while (i < lines.length && /^\s*>/.test(lines[i])) { buf.push(lines[i].replace(/^\s*>\s?/, '')); i++; }
+          out.push('<blockquote>' + buf.map(inline).join('<br>') + '</blockquote>');
+          continue;
+        }
+        if (isList(line)) {
+          const items = [];
+          while (i < lines.length) {
+            const l = lines[i];
+            const lm = l.match(/^(\s*)([-*+]|\d+[.)])\s+(.*)$/);
+            if (lm && !HR.test(l)) { items.push({ indent: lm[1].replace(/\t/g, '    ').length, ordered: /\d/.test(lm[2]), text: lm[3] }); i++; }
+            else if (l.trim() && /^\s+\S/.test(l) && items.length && !isBlock(i)) { items[items.length - 1].text += ' ' + l.trim(); i++; }
+            else break;
+          }
+          out.push(renderList(items));
+          continue;
+        }
+        const buf = [line.trim()]; i++;
+        while (i < lines.length && lines[i].trim() && !isBlock(i)) { buf.push(lines[i].trim()); i++; }
+        out.push('<p>' + inline(buf.join(' ')) + '</p>');
+      }
+      return out.join('\n');
+    }
+
+    /* =====================================================================
+     *  ANÁLISIS ESTÁTICO ABAP
+     * ===================================================================== */
+    const MARK_RE = /^#{8} ARCHIVO \[\d+\/\d+\]: (.+?) #{8}\s*$/;
+
+    function abapLimpiar(code) {
+      return code.split('\n').map(l => {
+        if (MARK_RE.test(l) || /^\*/.test(l)) return '';
+        let q = null, out = '';
+        for (let i = 0; i < l.length; i++) {
+          const c = l[i];
+          if (q) { out += c; if (c === q) q = null; continue; }
+          if (c === "'" || c === '`' || c === '|') { q = c; out += c; continue; }
+          if (c === '"') break;
+          out += c;
+        }
+        return out;
+      }).join('\n');
+    }
+
+    function expandirCadena(s) {
+      let q = null, idx = -1;
+      for (let i = 0; i < s.length; i++) {
+        const c = s[i];
+        if (q) { if (c === q) q = null; continue; }
+        if (c === "'" || c === '`' || c === '|') { q = c; continue; }
+        if (c === ':') { idx = i; break; }
+      }
+      if (idx < 0) return [s];
+      const prefijo = s.slice(0, idx).trim();
+      if (!/^[A-Za-z][\w-]*(?: [A-Za-z][\w-]*)?$/.test(prefijo)) return [s];
+      const items = []; let cur = '', d = 0; q = null;
+      for (const c of s.slice(idx + 1)) {
+        if (q) { cur += c; if (c === q) q = null; continue; }
+        if (c === "'" || c === '`' || c === '|') { q = c; cur += c; continue; }
+        if (c === '(' || c === '[') d++;
+        if (c === ')' || c === ']') d--;
+        if (c === ',' && d <= 0) { items.push(cur); cur = ''; continue; }
+        cur += c;
+      }
+      items.push(cur);
+      return items.map(x => x.trim()).filter(Boolean).map(x => prefijo + ' ' + x);
+    }
+
+    function abapSentencias(clean) {
+      const res = []; let cur = '', q = null;
+      for (let i = 0; i < clean.length; i++) {
+        const c = clean[i];
+        if (c === '\n') { q = null; cur += c; continue; }
+        if (q) { cur += c; if (c === q) q = null; continue; }
+        if (c === "'" || c === '`' || c === '|') { q = c; cur += c; continue; }
+        if (c === '.') {
+          const n = clean[i + 1];
+          if (n === undefined || /\s/.test(n)) { res.push(cur); cur = ''; continue; }
+        }
+        cur += c;
+      }
+      if (cur.trim()) res.push(cur);
+      return res.map(s => s.replace(/\s+/g, ' ').trim()).filter(Boolean).flatMap(expandirCadena);
+    }
+
+    function paramNames(firma) {
+      const t = firma.replace(/\bVALUE\(\s*(\w+)\s*\)/gi, '$1').split(/\s+/).filter(Boolean);
+      const KW = /^(USING|CHANGING|TABLES|IMPORTING|EXPORTING|RETURNING)$/i, STOP = /^(RAISING|EXCEPTIONS)$/i;
+      const SKIP = /^(REF|TO|STANDARD|SORTED|HASHED|TABLE|OF|LINE)$/i;
+      const NEXTKW = /^(TYPE|LIKE|STRUCTURE|OPTIONAL|DEFAULT|USING|CHANGING|TABLES|IMPORTING|EXPORTING|RETURNING|RAISING|EXCEPTIONS|PREFERRED|PARAMETER)$/i;
+      const names = []; let exp = false;
+      for (let i = 0; i < t.length; i++) {
+        const w = t[i];
+        if (STOP.test(w)) break;
+        if (KW.test(w)) { exp = true; continue; }
+        if (exp) { names.push(w); exp = false; continue; }
+        if (/^(TYPE|LIKE|STRUCTURE)$/i.test(w)) {
+          let j = i + 1;
+          while (j < t.length && SKIP.test(t[j])) j++;
+          i = j;
+          const nx = t[i + 1];
+          if (nx && !NEXTKW.test(nx)) { names.push(nx); i++; }
+        }
+      }
+      return names;
+    }
+
+    function fmParams(txt) {
+      const out = {}, re = /\b(EXPORTING|IMPORTING|TABLES|CHANGING|EXCEPTIONS)\b/gi, marks = [];
+      let m;
+      while ((m = re.exec(txt))) marks.push({ k: m[1].toUpperCase(), i: m.index, e: re.lastIndex });
+      marks.forEach((mk, idx) => {
+        const seg = txt.slice(mk.e, idx + 1 < marks.length ? marks[idx + 1].i : txt.length);
+        const names = [...seg.matchAll(/(?:^|\s)([\w/]+)\s*=/g)].map(x => x[1]);
+        out[mk.k] = uniq((out[mk.k] || []).concat(names));
+      });
+      return out;
+    }
+
+    function abapCabecera(code) {
+      const cab = { desc: '', autor: '', fecha: '', ticket: '', modulo: '', cambios: [] };
+      const bloque = [];
+      for (const l of code.split('\n')) {
+        if (MARK_RE.test(l)) continue;
+        if (/^\*/.test(l) || /^\s*"/.test(l) || !l.trim()) bloque.push(l); else break;
+      }
+      const txt = bloque.map(l => l.replace(/^\*[&*\s-]*/, '').replace(/^\s*"\s*/, '').replace(/[-*&\s]+$/, '').trim()).filter(Boolean);
+      const pick = (re) => { for (const l of txt) { const m = l.match(re); if (m && m[2].trim()) return m[2].trim(); } return ''; };
+      cab.desc = pick(/^(descripci[oó]n|description|objetivo|prop[oó]sito|purpose)\s*[:=]\s*(.+)$/i);
+      cab.autor = pick(/^(autor|author|desarrollador|creado por|created by)\s*[:=]\s*(.+)$/i);
+      cab.fecha = pick(/^(fecha(?: de creaci[oó]n)?|date)\s*[:=]\s*(.+)$/i);
+      cab.ticket = pick(/^(ticket|jira|oss|nota|transporte|request|orden de transporte)\s*[:=]\s*(.+)$/i);
+      cab.modulo = pick(/^(m[oó]dulo|module)\s*[:=]\s*(.+)$/i);
+      cab.cambios = txt.filter(l => /\d{1,2}[./-]\d{1,2}[./-]\d{2,4}|\b\d{4}-\d{2}-\d{2}\b/.test(l) && !/^(fecha|date)\b[^:=]*[:=]/i.test(l));
+      return cab;
+    }
+
+    const EV_RE = /^(LOAD-OF-PROGRAM|INITIALIZATION|START-OF-SELECTION|END-OF-SELECTION|TOP-OF-PAGE(?: DURING LINE-SELECTION)?|END-OF-PAGE|AT LINE-SELECTION|AT USER-COMMAND|AT SELECTION-SCREEN(?: OUTPUT| ON (?:VALUE-REQUEST|HELP-REQUEST) FOR [\w-]+| ON BLOCK [\w-]+| ON RADIOBUTTON GROUP [\w-]+| ON END OF [\w-]+| ON EXIT-COMMAND| ON [\w-]+)?)$/i;
+    const TIPO_RE = /\b((?:TYPE|LIKE)\s+(?:(?:STANDARD|SORTED|HASHED)\s+TABLE\s+OF\s+|TABLE\s+OF\s+|REF\s+TO\s+|LINE\s+OF\s+|RANGE\s+OF\s+)?[\w/<>=~-]+)/i;
+
+    function analizarABAP(code, release) {
+      const A = {
+        archivos: [...code.matchAll(/^#{8} ARCHIVO \[\d+\/\d+\]: (.+?) #{8}\s*$/gm)].map(m => m[1]),
+        objeto: null, eventos: [], forms: [], clases: [], metodos: [], modulosFn: [], includes: [], tables: [],
+        selScreen: [], constantes: [], tipos: [], globales: [], nGlobales: 0, nLocales: 0,
+        leidas: new Set(), escritas: new Set(), fms: [], clasesUsadas: new Set(), submits: [], transacciones: [], auth: [],
+        msgs: {}, msgList: new Set(), llamadas: {}, obsoletos: new Set(), avisos: [], fmInterfaz: [],
+        st: { subrc: 0, try: 0, catch: 0, raise: 0, commit: 0, rollback: 0, bapiCommit: 0, bapiRollback: 0, enqueue: 0, dequeue: 0, log: 0 },
+        nSentencias: 0
+      };
+      // Interfaz de módulos de función (comentarios *")
+      A.fmInterfaz = code.split('\n').filter(l => /^\*"/.test(l) && !/^\*"-{3,}/.test(l) && !/Local Interface:|Lokale Schnittstelle:/i.test(l)).map(l => l.replace(/^\*"\s?/, '').trimEnd()).filter(l => l.trim()).slice(0, 60);
+
+      const clean = abapLimpiar(code);
+      const sents = abapSentencias(clean);
+      A.nSentencias = sents.length;
+      const declarados = new Set(), candEsc = new Set();
+      let scope = null, loop = 0, defClase = null, implClase = null, structT = 0, structD = 0, selStar = 0;
+      const loopWarn = { select: [], read: [], commit: [] };
+      const aviso = (sev, txt) => A.avisos.push({ sev, txt });
+      const push = (arr, v) => { if (!arr.includes(v)) arr.push(v); };
+      const callOf = (from, to) => { const k = from || '(nivel programa)'; A.llamadas[k] = A.llamadas[k] || []; push(A.llamadas[k], to); };
+      const ambito = () => scope || (defClase ? 'clase ' + defClase : 'global');
+
+      for (const s of sents) {
+        let m;
+        for (const mm of s.matchAll(/\b(?:DATA|FINAL)\(\s*(\w+)\s*\)/gi)) declarados.add(mm[1].toLowerCase());
+        A.st.subrc += (s.match(/\bsy-subrc\b/gi) || []).length;
+        for (const mm of s.matchAll(/(?:^|[^\w])([a-z_/][\w/]*)=>/gi)) A.clasesUsadas.add(mm[1].toLowerCase());
+        for (const mm of s.matchAll(/\bTYPE REF TO\s+([\w/]+)/gi)) A.clasesUsadas.add(mm[1].toLowerCase());
+        for (const mm of s.matchAll(/\bNEW\s+([a-z_/][\w/]*)\s*\(/gi)) A.clasesUsadas.add(mm[1].toLowerCase());
+
+        if ((m = s.match(/^(REPORT|PROGRAM)\s+([\w/]+)/i))) { A.objeto = A.objeto || { tipo: m[1].toUpperCase(), nombre: m[2] }; }
+        else if ((m = s.match(/^FUNCTION-POOL\s+([\w/]+)/i))) { A.objeto = A.objeto || { tipo: 'FUNCTION-POOL', nombre: m[1] }; }
+        else if ((m = s.match(/^CLASS\s+([\w/]+)\s+DEFINITION\b(.*)$/i))) {
+          if (!/\bDEFERRED\b/i.test(m[2])) { A.clases.push({ nombre: m[1], detalle: m[2].trim() }); defClase = m[1]; }
+        }
+        else if ((m = s.match(/^CLASS\s+([\w/]+)\s+IMPLEMENTATION\b/i))) { implClase = m[1]; }
+        else if (/^ENDCLASS$/i.test(s)) { defClase = null; implClase = null; }
+        else if ((m = s.match(/^INTERFACE\s+([\w/]+)(.*)$/i)) && !/\b(DEFERRED|LOAD)\b/i.test(m[2])) { A.clases.push({ nombre: m[1], detalle: '(interfaz)' }); }
+        else if ((m = s.match(/^(CLASS-METHODS|METHODS)\s+(\w+)(.*)$/i))) {
+          const f = m[3].trim();
+          A.metodos.push({ clase: defClase, nombre: m[2], estatico: /^CLASS/i.test(m[1]), firma: f });
+          paramNames(f).forEach(n => declarados.add(n.toLowerCase()));
+        }
+        else if ((m = s.match(/^METHOD\s+(\w+)/i))) { scope = (implClase ? implClase + '=>' : '') + m[1]; loop = 0; }
+        else if (/^ENDMETHOD$/i.test(s)) { scope = null; loop = 0; }
+        else if ((m = s.match(/^FORM\s+(\w+)(.*)$/i))) {
+          const f = m[2].trim();
+          A.forms.push({ nombre: m[1], firma: f });
+          paramNames(f).forEach(n => declarados.add(n.toLowerCase()));
+          scope = m[1]; loop = 0;
+        }
+        else if (/^ENDFORM$/i.test(s)) { scope = null; loop = 0; }
+        else if ((m = s.match(/^FUNCTION\s+([\w/]+)$/i))) { A.modulosFn.push(m[1]); scope = m[1]; loop = 0; }
+        else if (/^ENDFUNCTION$/i.test(s)) { scope = null; loop = 0; }
+        else if ((m = s.match(/^MODULE\s+(\w+)(?:\s+(OUTPUT|INPUT))?$/i))) { push(A.modulosFn, m[1] + (m[2] ? ' (' + m[2].toUpperCase() + ')' : '')); scope = m[1]; loop = 0; }
+        else if (/^ENDMODULE$/i.test(s)) { scope = null; loop = 0; }
+        else if (EV_RE.test(s)) {
+          const ev = s.replace(/\s+/g, ' ').toUpperCase();
+          A.eventos.push(ev);
+          if (!scope || scope.startsWith('Evento ')) scope = 'Evento ' + ev;
+          loop = 0;
+        }
+        else if ((m = s.match(/^INCLUDE\s+(?!STRUCTURE\b|TYPE\b)([\w/]+)/i))) { push(A.includes, m[1]); }
+        else if ((m = s.match(/^TABLES\s+([\w/]+)/i))) { push(A.tables, m[1]); }
+        else if ((m = s.match(/^PARAMETERS\s+(\w+)(.*)$/i))) { declarados.add(m[1].toLowerCase()); A.selScreen.push({ tipo: 'PARAMETERS', nombre: m[1], detalle: m[2].trim() }); }
+        else if ((m = s.match(/^SELECT-OPTIONS\s+(\w+)\s+FOR\s+([\w/<>~-]+)(.*)$/i))) { declarados.add(m[1].toLowerCase()); A.selScreen.push({ tipo: 'SELECT-OPTIONS', nombre: m[1], detalle: ('FOR ' + m[2] + ' ' + m[3]).trim() }); }
+        else if ((m = s.match(/^CONSTANTS\s+(.+)$/i))) {
+          const rest = m[1];
+          if (!/^(BEGIN|END) OF\b/i.test(rest)) {
+            const n = rest.split(/\s+/)[0].replace(/\(.*$/, '');
+            declarados.add(n.toLowerCase());
+            const v = (rest.match(/\bVALUE\s+((?:'(?:[^']|'')*')|(?:`[^`]*`)|\S+)/i) || [])[1] || '';
+            A.constantes.push({ nombre: n, tipo: (rest.match(TIPO_RE) || [])[1] || '', valor: v, ambito: ambito() });
+          }
+        }
+        else if ((m = s.match(/^TYPES\s+(.+)$/i))) {
+          const rest = m[1];
+          if (/^END OF\b/i.test(rest)) structT = Math.max(0, structT - 1);
+          else {
+            const mb = rest.match(/^BEGIN OF\s+(\w+)/i);
+            const n = mb ? mb[1] : rest.split(/\s+/)[0].replace(/\(.*$/, '');
+            if (structT === 0) A.tipos.push({ nombre: n, detalle: mb ? 'estructura' : ((rest.match(TIPO_RE) || [])[1] || '') });
+            if (mb) structT++;
+          }
+        }
+        else if ((m = s.match(/^(DATA|STATICS|CLASS-DATA|FIELD-SYMBOLS|CONTROLS|RANGES)\s+(.+)$/i))) {
+          const kind = m[1].toUpperCase(), rest = m[2];
+          if (/^END OF\b/i.test(rest)) structD = Math.max(0, structD - 1);
+          else {
+            const mb = rest.match(/^BEGIN OF\s+(?:COMMON PART\s+)?(\w+)/i);
+            const n = mb ? mb[1] : rest.split(/\s+/)[0].replace(/\(.*$/, '');
+            declarados.add(n.toLowerCase());
+            if (structD === 0) {
+              if (scope === null) { A.nGlobales++; A.globales.push({ nombre: n, decl: kind + (mb ? ' (estructura)' : ''), tipo: (rest.match(TIPO_RE) || [])[1] || '', ambito: ambito() }); }
+              else A.nLocales++;
+            }
+            if (mb) structD++;
+          }
+          if (/\bOCCURS\s+\d+/i.test(rest)) A.obsoletos.add('OCCURS (tablas con línea de cabecera)');
+          if (/\bWITH HEADER LINE\b/i.test(rest)) A.obsoletos.add('WITH HEADER LINE');
+        }
+        else if (/^SELECT\b/i.test(s)) {
+          for (const mm of s.matchAll(/\bFROM\s+(@?)([\w/]+)/gi)) if (!mm[1]) A.leidas.add(mm[2].toUpperCase());
+          for (const mm of s.matchAll(/\bJOIN\s+(@?)([\w/]+)/gi)) if (!mm[1]) A.leidas.add(mm[2].toUpperCase());
+          if (/^SELECT\s+(?:SINGLE\s+|DISTINCT\s+)?\*/i.test(s)) selStar++;
+          if (loop > 0) loopWarn.select.push(scope || '(nivel programa)');
+          const fae = s.match(/\bFOR ALL ENTRIES IN\s+@?([\w<>-]+)/i);
+          if (fae) {
+            const t = escRe(fae[1]);
+            const ok = new RegExp('(?:^|[^\\w])' + t + '\\s+IS\\s+NOT\\s+INITIAL|(?:^|[^\\w])NOT\\s+' + t + '\\s+IS\\s+INITIAL|lines\\(\\s*' + t + '\\s*\\)', 'i').test(clean);
+            if (!ok) aviso('Alta', 'FOR ALL ENTRIES IN ' + C(fae[1]) + ' sin validación aparente de tabla vacía (IS NOT INITIAL): con la tabla vacía el SELECT lee toda la tabla de base de datos.');
+          }
+        }
+        else if (/^(DELETE|UPDATE|INSERT|MODIFY)\b/i.test(s)) {
+          let t = null;
+          if ((m = s.match(/^DELETE\s+FROM\s+(@?)([\w/]+)/i))) t = m[1] ? null : m[2];
+          else if ((m = s.match(/^UPDATE\s+([\w/]+)\s+(?:SET|FROM)\b/i))) t = m[1];
+          else if ((m = s.match(/^INSERT\s+(?:INTO\s+)?([\w/]+)\s+(?:VALUES|FROM)\b/i)) && !/\bINTO TABLE\b|\bINDEX\b|\bINITIAL LINE\b/i.test(s)) t = m[1];
+          else if ((m = s.match(/^MODIFY\s+([\w/]+)\s+FROM\b/i)) && !/\bINDEX\b|\bTRANSPORTING\b|\bWHERE\b/i.test(s)) t = m[1];
+          else if ((m = s.match(/^DELETE\s+([\w/]+)\s+FROM\s+(?!\d|TO\b)/i))) t = m[1];
+          if (t) candEsc.add(t.toUpperCase());
+        }
+        else if ((m = s.match(/^CALL FUNCTION\s+(?:'([^']+)'|(\w+))(.*)$/i))) {
+          const n = m[1] || m[2], dyn = !m[1], resto = m[3] || '';
+          A.fms.push({
+            nombre: n, dinamico: dyn, scope: scope || '(nivel programa)',
+            destino: ((resto.match(/\bDESTINATION\s+('[^']+'|[\w<>-]+)/i) || [])[1] || '').replace(/'/g, ''),
+            update: /\bIN UPDATE TASK\b/i.test(resto), fondo: /\bIN BACKGROUND (?:TASK|UNIT)\b/i.test(resto), async: /\bSTARTING NEW TASK\b/i.test(resto),
+            params: fmParams(resto)
+          });
+          const U = n.toUpperCase();
+          if (!dyn) {
+            if (U === 'BAPI_TRANSACTION_COMMIT') { A.st.bapiCommit++; if (loop > 0) loopWarn.commit.push(scope || '(nivel programa)'); }
+            else if (U === 'BAPI_TRANSACTION_ROLLBACK') A.st.bapiRollback++;
+            else if (/^ENQUEUE_/.test(U)) A.st.enqueue++;
+            else if (/^DEQUEUE_/.test(U)) A.st.dequeue++;
+            else if (/^BAL_/.test(U)) A.st.log++;
+          }
+        }
+        else if (/^MESSAGE\b/i.test(s)) {
+          let t = null, txt = null;
+          if ((m = s.match(/^MESSAGE\s+([EWISAX])(\d{3})(?:\(([\w/]+)\))?/i))) { t = m[1].toUpperCase(); txt = t + m[2] + (m[3] ? ' (' + m[3] + ')' : ''); }
+          else if ((m = s.match(/^MESSAGE\s+ID\s+('?[\w/]+'?)\s+TYPE\s+'?([EWISAX])'?\s+NUMBER\s+'?(\w+)'?/i))) { t = m[2].toUpperCase(); txt = t + m[3] + ' (' + m[1].replace(/'/g, '') + ')'; }
+          else if ((m = s.match(/\bTYPE\s+'([EWISAX])'/i))) { t = m[1].toUpperCase(); txt = t + ' (texto directo)'; }
+          if (t) { A.msgs[t] = (A.msgs[t] || 0) + 1; A.msgList.add(txt); }
+        }
+        else if ((m = s.match(/^AUTHORITY-CHECK OBJECT\s+'?([\w/]+)'?(.*)$/i))) {
+          A.auth.push({ objeto: m[1].toUpperCase(), ids: [...m[2].matchAll(/\bID\s+'?([\w/]+)'?/gi)].map(x => x[1].toUpperCase()), scope: scope || '(nivel programa)' });
+        }
+        else if ((m = s.match(/^PERFORM\s+(\w+)(?:\s+IN PROGRAM\s+(\w+))?/i))) { callOf(scope, m[1] + (m[2] ? ' (en ' + m[2] + ')' : '')); }
+        else if ((m = s.match(/^SUBMIT\s+(\(?[\w/]+\)?)/i))) { push(A.submits, m[1]); }
+        else if ((m = s.match(/^(?:CALL|LEAVE TO)\s+TRANSACTION\s+(?:'([^']+)'|(\w+))/i))) { push(A.transacciones, (m[1] || '<' + m[2] + '>').toUpperCase()); }
+        else if (/^(LOOP|DO|WHILE)(?:\s|$)/i.test(s)) { loop++; }
+        else if (/^(ENDLOOP|ENDDO|ENDWHILE)$/i.test(s)) { loop = Math.max(0, loop - 1); }
+        else if (/^READ TABLE\b/i.test(s)) { if (loop > 0 && !/\bBINARY SEARCH\b|\bWITH TABLE KEY\b/i.test(s)) loopWarn.read.push(scope || '(nivel programa)'); }
+        else if (/^TRY$/i.test(s)) { A.st.try++; }
+        else if (/^CATCH\b/i.test(s)) { A.st.catch++; }
+        else if (/^RAISE\b/i.test(s)) { A.st.raise++; }
+        else if (/^COMMIT WORK\b/i.test(s)) { A.st.commit++; if (loop > 0) loopWarn.commit.push(scope || '(nivel programa)'); }
+        else if (/^ROLLBACK WORK\b/i.test(s)) { A.st.rollback++; }
+        else if (/^MOVE\s/i.test(s)) { A.obsoletos.add('MOVE ... TO'); }
+        else if (/^(ADD|SUBTRACT|MULTIPLY|DIVIDE)\s/i.test(s)) { A.obsoletos.add('ADD / SUBTRACT / MULTIPLY / DIVIDE'); }
+      }
+
+      // ---- Post-proceso ----
+      A.escritas = new Set([...candEsc].filter(t => !declarados.has(t.toLowerCase())));
+      const locales = new Set(A.clases.map(c => c.nombre.toLowerCase()));
+      A.clasesExternas = [...A.clasesUsadas].filter(c => !locales.has(c) && c !== 'me' && c !== 'sy' && c !== 'super').sort();
+
+      // ---- Avisos de calidad ----
+      if (selStar) aviso('Media', 'SELECT * en ' + selStar + ' sentencia(s): traer solo los campos necesarios.');
+      if (loopWarn.select.length) aviso('Alta', 'SELECT dentro de un bucle (LOOP / DO / WHILE) en: ' + uniq(loopWarn.select).map(C).join(', ') + '. Reemplazar por una lectura previa en tabla interna.');
+      if (loopWarn.read.length) aviso('Media', 'READ TABLE sin BINARY SEARCH ni WITH TABLE KEY dentro de bucles en: ' + uniq(loopWarn.read).map(C).join(', ') + '. Verificar el tipo de tabla (SORTED / HASHED) o el orden previo.');
+      if (loopWarn.commit.length) aviso('Alta', 'COMMIT dentro de un bucle en: ' + uniq(loopWarn.commit).map(C).join(', ') + '. Puede romper la consistencia transaccional.');
+      if (A.escritas.size && !A.auth.length) aviso('Media', 'El programa escribe en base de datos (' + [...A.escritas].map(C).join(', ') + ') y no se encontró ningún AUTHORITY-CHECK.');
+      const bapisMod = A.fms.filter(f => !f.dinamico && /^BAPI_/i.test(f.nombre) && !/^BAPI_TRANSACTION_/i.test(f.nombre) && /(CREATE|CHANGE|UPDATE|DELETE|POST|CANCEL|SAVE|REVERSE|ADD|REMOVE|RELEASE)/i.test(f.nombre));
+      if (bapisMod.length) {
+        const nom = uniq(bapisMod.map(f => C(f.nombre))).join(', ');
+        if (!A.st.bapiCommit && !A.st.commit) aviso('Alta', 'BAPI de escritura (' + nom + ') sin BAPI_TRANSACTION_COMMIT ni COMMIT WORK en el código analizado: verificar dónde se confirma.');
+        if (!A.st.bapiRollback && !A.st.rollback) aviso('Media', 'BAPI de escritura (' + nom + ') sin BAPI_TRANSACTION_ROLLBACK ante errores.');
+        const soloE = /\b(?:type|msgty)\b\s*(?:=|EQ)\s*'E'/i.test(clean);
+        const conA = /\b(?:type|msgty)\b\s*(?:=|EQ)\s*'A'/i.test(clean) || /\b(?:type|msgty)\b\s*(?:CA|CO)\s*'[A-Z]*A[A-Z]*'/i.test(clean);
+        const algunaE = soloE || /\b(?:type|msgty)\b\s*(?:CA|CO)\s*'[A-Z]*E[A-Z]*'/i.test(clean);
+        if (!algunaE) aviso('Alta', 'No se evidencia la evaluación de los mensajes de RETURN (tipo E/A) tras llamar a BAPIs.');
+        else if (soloE && !conA) aviso('Media', 'Solo se evalúa el tipo E en RETURN; considerar también A (y X).');
+      }
+      if (A.st.subrc === 0 && (A.fms.length || A.leidas.size)) aviso('Media', 'No se evalúa sy-subrc en ninguna parte del código analizado.');
+      if (A.tables.length) aviso('Baja', 'Uso de TABLES (' + A.tables.map(C).join(', ') + '): crea áreas de trabajo implícitas; preferir DATA con tipo explícito salvo para pantallas de selección.');
+      A.obsoletos.forEach(o => aviso('Baja', 'Sentencia obsoleta: ' + o + '.'));
+
+      // Release objetivo
+      const m740 = [
+        ['declaraciones inline DATA() / FINAL()', /\bDATA\(\s*\w+\s*\)/i],
+        ['expresiones constructoras (VALUE / NEW / CONV / COND / SWITCH / CORRESPONDING / REF / CAST #())', /\b(?:VALUE|NEW|CONV|COND|SWITCH|CORRESPONDING|REF|CAST|EXACT)\s*(?:#|[a-z_/][\w/]*)\s*\(/i],
+        ['plantillas de texto |...{ }...|', /\|[^|\n]*\{[^|\n]*\}[^|\n]*\|/],
+        ['expresiones de tabla itab[ ... ]', /[\w>)\]]\[\s*(?:\w+\s*=|\d+\s*\]|\w+\s*\])/],
+        ['variables de host con @ en Open SQL', /\bINTO\s+(?:TABLE\s+)?@|\bWHERE[^.]*@\w/i]
+      ];
+      const m750 = [];
+      if (/\bFINAL\(\s*\w+\s*\)/i.test(clean)) m750.push('FINAL() (≥ 7.57)');
+      if (sents.some(x => /^SELECT\b/i.test(x) && /\bFIELDS\b/i.test(x))) m750.push('SELECT ... FIELDS (≥ 7.50)');
+      if (sents.some(x => /^SELECT\b/i.test(x) && /\bUNION\b/i.test(x))) m750.push('UNION en Open SQL (≥ 7.50)');
+      const det740 = m740.filter(([, re]) => re.test(clean)).map(([n]) => n);
+      if (release === '731' && det740.length) aviso('Alta', 'Sintaxis de ABAP 7.40 o superior detectada, no disponible en 7.31 o inferior: ' + det740.join('; ') + '.');
+      if (release !== '750' && m750.length) aviso('Alta', 'Sintaxis que requiere ABAP 7.50 o superior: ' + m750.join('; ') + '.');
+      return A;
+    }
+
+    function resumenEstatico(A, cab) {
+      const L = [];
+      const add = (t, arr) => { if (arr && arr.length) L.push('- ' + t + ': ' + arr.join(', ')); };
+      if (A.objeto) L.push('- Objeto: ' + A.objeto.nombre + ' (' + A.objeto.tipo + ')');
+      if (cab.desc || cab.autor || cab.fecha || cab.ticket || cab.modulo) L.push('- Encabezado: ' + [cab.desc && 'descripción=' + cab.desc, cab.autor && 'autor=' + cab.autor, cab.fecha && 'fecha=' + cab.fecha, cab.ticket && 'ticket=' + cab.ticket, cab.modulo && 'módulo=' + cab.modulo].filter(Boolean).join('; '));
+      add('Historial de cambios en el encabezado', cab.cambios);
+      add('INCLUDEs', A.includes);
+      add('Eventos', A.eventos);
+      add('FORMs', A.forms.map(f => f.nombre));
+      add('Clases / interfaces', A.clases.map(c => c.nombre));
+      add('Métodos', A.metodos.map(x => (x.clase ? x.clase + '=>' : '') + x.nombre));
+      add('Módulos de función / módulos de dynpro', A.modulosFn);
+      add('Pantalla de selección', A.selScreen.map(x => x.tipo + ' ' + x.nombre));
+      add('Tablas leídas (SELECT)', [...A.leidas]);
+      add('Tablas escritas (INSERT/UPDATE/MODIFY/DELETE)', [...A.escritas]);
+      add('Funciones / BAPIs invocados', uniq(A.fms.map(f => f.dinamico ? '<' + f.nombre + '>' : f.nombre)));
+      add('Objetos de autorización', uniq(A.auth.map(a => a.objeto)));
+      add('Mensajes', [...A.msgList]);
+      add('SUBMIT', A.submits); add('CALL TRANSACTION', A.transacciones);
+      return L.join('\n');
+    }
+
+    /* =====================================================================
+     *  ANÁLISIS ESTÁTICO GENÉRICO (JS / Python / SQL / otros)
+     * ===================================================================== */
+    function analizarGenerico(code, lang) {
+      const G = { imports: [], funciones: [], clases: [], env: [], tablas: [], err: { try: 0, catchexc: 0, lanza: 0, log: 0 }, todos: [] };
+      const push = (a, v) => { if (v && !a.includes(v)) a.push(v); };
+      const lines = code.split('\n');
+      for (const l of lines) {
+        let m;
+        if (lang === 'js') {
+          if ((m = l.match(/\bimport\s+.*?from\s+['"]([^'"]+)['"]/))) push(G.imports, m[1]);
+          if ((m = l.match(/\brequire\(\s*['"]([^'"]+)['"]\s*\)/))) push(G.imports, m[1]);
+          if ((m = l.match(/\b(?:async\s+)?function\s*\*?\s*(\w+)\s*\(([^)]*)\)/))) push(G.funciones, m[1] + '(' + m[2].trim() + ')');
+          else if ((m = l.match(/\b(?:const|let|var)\s+(\w+)\s*=\s*(?:async\s*)?\(([^)]*)\)\s*=>/))) push(G.funciones, m[1] + '(' + m[2].trim() + ')');
+          if ((m = l.match(/^\s*class\s+(\w+)/))) push(G.clases, m[1]);
+          for (const e of l.matchAll(/process\.env\.(\w+)/g)) push(G.env, e[1]);
+          if (/\btry\s*\{/.test(l)) G.err.try++;
+          if (/\bcatch\s*(\(|\{)/.test(l)) G.err.catchexc++;
+          if (/\bthrow\b/.test(l)) G.err.lanza++;
+          if (/\bconsole\.(error|warn|log|info)\b/.test(l)) G.err.log++;
+        } else if (lang === 'python') {
+          if ((m = l.match(/^\s*import\s+([\w., ]+)/))) m[1].split(',').forEach(x => push(G.imports, x.trim().split(' ')[0]));
+          if ((m = l.match(/^\s*from\s+([\w.]+)\s+import\b/))) push(G.imports, m[1]);
+          if ((m = l.match(/^\s*(?:async\s+)?def\s+(\w+)\s*\(([^)]*)\)/))) push(G.funciones, m[1] + '(' + m[2].trim() + ')');
+          if ((m = l.match(/^\s*class\s+(\w+)/))) push(G.clases, m[1]);
+          for (const e of l.matchAll(/os\.(?:getenv\(\s*|environ(?:\.get\(|\[)\s*)['"](\w+)['"]/g)) push(G.env, e[1]);
+          if (/^\s*try\s*:/.test(l)) G.err.try++;
+          if (/^\s*except\b/.test(l)) G.err.catchexc++;
+          if (/^\s*raise\b/.test(l)) G.err.lanza++;
+          if (/\b(?:logging|logger|log)\.(?:debug|info|warning|error|critical|exception)\b|\bprint\(/.test(l)) G.err.log++;
+        } else if (lang === 'sql') {
+          for (const e of l.matchAll(/\b(?:FROM|JOIN|INTO|UPDATE|TABLE)\s+([\w."[\]`]+)/gi)) if (!/^(SELECT|VALUES|SET)$/i.test(e[1])) push(G.tablas, e[1]);
+        }
+        if ((m = l.match(/\b(TODO|FIXME|XXX|HACK)\b:?\s*(.*)$/))) G.todos.push(m[1] + ' ' + m[2].trim());
+      }
+      return G;
+    }
+
+    /* =====================================================================
+     *  GENERADORES DE DOCUMENTACIÓN LOCAL
+     * ===================================================================== */
+    function docLocalABAP(A, cab, o) {
+      const L = [], p = t => L.push(t);
+      p('# Documentación técnica — ' + o.name + '\n');
+      p('> **Modo local (análisis estático, sin IA).** Generado el ' + new Date().toLocaleDateString('es-AR') + '. Refleja solo lo que surge literalmente del código; el propósito funcional, las descripciones y la guía de pruebas detallada requieren el modo IA.\n');
+
+      p('## 1. Encabezado o ficha técnica del archivo\n');
+      const tipoObj = A.objeto ? C(A.objeto.nombre) + ' (' + A.objeto.tipo + ')'
+        : A.clases[0] ? 'Clase / interfaz ' + C(A.clases[0].nombre)
+        : A.modulosFn[0] ? 'Módulo de función ' + C(A.modulosFn[0]) : ND;
+      p(tabla(['Campo', 'Valor'], [
+        ['Programa / objeto', tipoObj],
+        ['Archivos analizados', A.archivos.length ? A.archivos.map(C).join(', ') : C(o.name)],
+        ['Lenguaje / release objetivo', 'ABAP ' + RELEASE_LABEL[o.release]],
+        ['Propósito', cab.desc || ND], ['Módulo SAP', cab.modulo || ND], ['Autor', cab.autor || ND],
+        ['Fecha de creación', cab.fecha || ND], ['Ticket / referencia', cab.ticket || ND],
+        ['Contexto adicional', o.ctx || '—'], ['Tamaño', o.lineas + ' líneas · ' + A.nSentencias + ' sentencias']
+      ]));
+
+      p('\n## 2. Control de versiones e historial de cambios\n');
+      p(cab.cambios.length ? 'Entradas detectadas en el encabezado del programa:\n\n' + lista(cab.cambios.map(C)) : 'No se encontró un historial de cambios en el encabezado. ' + ND + '\n');
+
+      p('\n## 3. Definición de dependencias e importaciones\n');
+      const dep = [];
+      A.includes.forEach(i => dep.push(['Include', C(i), 'Código fuente incluido']));
+      [...A.leidas].sort().forEach(t => dep.push(['Tabla / vista de BD', C(t), A.escritas.has(t) ? 'Lectura y escritura' : 'Lectura']));
+      [...A.escritas].filter(t => !A.leidas.has(t)).sort().forEach(t => dep.push(['Tabla de BD', C(t), 'Escritura']));
+      A.tables.forEach(t => dep.push(['Área de trabajo (TABLES)', C(t), 'Declaración TABLES']));
+      const fmMap = new Map();
+      A.fms.forEach(f => { const k = f.nombre.toUpperCase() + (f.dinamico ? '*' : ''); if (!fmMap.has(k)) fmMap.set(k, { f, n: 0, paramsAll: {} }); const e = fmMap.get(k); e.n++; Object.entries(f.params).forEach(([kk, v]) => { e.paramsAll[kk] = uniq((e.paramsAll[kk] || []).concat(v)); }); });
+      [...fmMap.values()].forEach(({ f, n, paramsAll }) => {
+        const flags = [f.destino && 'RFC → ' + f.destino, f.update && 'UPDATE TASK', f.fondo && 'BACKGROUND', f.async && 'NEW TASK', f.dinamico && 'nombre dinámico'].filter(Boolean);
+        const ps = Object.entries(paramsAll).map(([k, v]) => k + ': ' + v.join(', ')).join(' · ');
+        dep.push([/^BAPI_/i.test(f.nombre) ? 'BAPI' : 'Módulo de función', C(f.nombre), [n > 1 ? n + ' llamadas' : '', flags.join(', '), ps].filter(Boolean).join(' — ')]);
+      });
+      A.clasesExternas.forEach(c => dep.push(['Clase / interfaz', C(c), 'Referenciada en el código']));
+      A.submits.forEach(s => dep.push(['SUBMIT', C(s), 'Programa invocado']));
+      A.transacciones.forEach(t => dep.push(['CALL TRANSACTION', C(t), 'Transacción invocada']));
+      uniq(A.auth.map(a => a.objeto)).forEach(ob => dep.push(['Objeto de autorización', C(ob), 'Campos: ' + uniq(A.auth.filter(a => a.objeto === ob).flatMap(a => a.ids)).join(', ')]));
+      p(dep.length ? tabla(['Tipo', 'Nombre', 'Detalle'], dep) : 'No se detectaron dependencias externas.\n');
+
+      p('\n## 4. Arquitectura y estructura del código\n');
+      p('- **Tipo de objeto:** ' + (A.objeto ? A.objeto.tipo : (A.clases.length ? 'Clase / interfaz' : A.modulosFn.length ? 'Módulo de función / dynpro' : 'No determinable')));
+      p('- **Composición:** ' + A.forms.length + ' FORM(s), ' + A.metodos.length + ' método(s) declarados, ' + A.clases.length + ' clase(s)/interfaz(ces), ' + A.modulosFn.length + ' módulo(s) de función/dynpro.');
+      if (A.eventos.length) p('- **Eventos ABAP (orden de aparición):** ' + A.eventos.map(C).join(' → '));
+      p('');
+      const flujo = Object.entries(A.llamadas).map(([k, v]) => [C(k), v.map(C).join(', ')]);
+      p(flujo.length ? '**Flujo de llamadas (PERFORM):**\n\n' + tabla(['Bloque', 'Invoca'], flujo) : 'No se detectaron llamadas PERFORM.\n');
+
+      p('\n## 5. Documentación de API interna\n');
+      if (A.forms.length) {
+        p('### Subrutinas (FORM)\n');
+        p(tabla(['FORM', 'Parámetros', 'Invocada desde'], A.forms.map(f => [C(f.nombre), f.firma ? C(f.firma) : '—',
+          Object.entries(A.llamadas).filter(([, v]) => v.some(x => x.toLowerCase().split(' ')[0] === f.nombre.toLowerCase())).map(([k]) => C(k)).join(', ') || '—'])));
+      }
+      if (A.metodos.length) {
+        p('\n### Métodos\n');
+        p(tabla(['Clase', 'Método', 'Tipo', 'Firma'], A.metodos.map(x => [x.clase ? C(x.clase) : '—', C(x.nombre), x.estatico ? 'Estático' : 'Instancia', x.firma ? C(x.firma) : '—'])));
+      }
+      if (A.modulosFn.length) { p('\n### Módulos de función / dynpro\n'); p(lista(A.modulosFn.map(C))); }
+      if (A.fmInterfaz.length) p('\nInterfaz declarada en los comentarios del módulo de función:\n\n' + '\u0060\u0060\u0060\n' + A.fmInterfaz.join('\n') + '\n\u0060\u0060\u0060\n');
+      if (!A.forms.length && !A.metodos.length && !A.modulosFn.length) p('No se detectaron subrutinas, métodos ni módulos.\n');
+
+      p('\n## 6. Variables, constantes y entorno\n');
+      if (A.selScreen.length) { p('### Pantalla de selección\n'); p(tabla(['Tipo', 'Nombre', 'Definición'], A.selScreen.map(x => [x.tipo, C(x.nombre), x.detalle ? C(x.detalle) : '—']))); }
+      if (A.constantes.length) { p('\n### Constantes\n'); p(tabla(['Nombre', 'Tipo', 'Valor', 'Ámbito'], A.constantes.map(x => [C(x.nombre), x.tipo ? C(x.tipo) : '—', x.valor ? C(x.valor) : '—', x.ambito]))); }
+      if (A.tipos.length) { p('\n### Tipos y estructuras\n'); p(tabla(['Nombre', 'Definición'], A.tipos.map(x => [C(x.nombre), x.detalle ? C(x.detalle) : '—']))); }
+      if (A.globales.length) { p('\n### Variables globales\n'); p(tabla(['Nombre', 'Declaración', 'Tipo', 'Ámbito'], A.globales.map(x => [C(x.nombre), x.decl, x.tipo ? C(x.tipo) : '—', x.ambito]))); }
+      p('\nResumen: ' + A.nGlobales + ' declaración(es) global(es) y ' + A.nLocales + ' local(es) (dentro de FORM / método / módulo de función).\n');
+
+      p('\n## 7. Manejo de errores y logs\n');
+      const e = A.st, msgs = Object.entries(A.msgs).map(([k, v]) => k + '×' + v).join(', ');
+      p(lista([
+        'Verificaciones de ' + C('sy-subrc') + ': ' + e.subrc,
+        'Excepciones de clase: ' + e.try + ' bloque(s) TRY, ' + e.catch + ' CATCH, ' + e.raise + ' RAISE',
+        'Mensajes (MESSAGE): ' + (msgs || 'ninguno') + (A.msgList.size ? ' — ' + [...A.msgList].map(C).join(', ') : ''),
+        'Transacción: COMMIT WORK ×' + e.commit + ', ROLLBACK WORK ×' + e.rollback + ', BAPI_TRANSACTION_COMMIT ×' + e.bapiCommit + ', BAPI_TRANSACTION_ROLLBACK ×' + e.bapiRollback,
+        'Bloqueos: ENQUEUE ×' + e.enqueue + ', DEQUEUE ×' + e.dequeue,
+        'Application Log (BAL_*): ' + (e.log ? e.log + ' llamada(s)' : 'no se usa')
+      ]));
+
+      p('\n## 8. Guía de compilación, despliegue y pruebas\n');
+      const g = [];
+      if (A.objeto && /REPORT|PROGRAM/.test(A.objeto.tipo)) g.push('Ejecutar con ' + C('SE38') + ' / ' + C('SA38') + ' el programa ' + C(A.objeto.nombre) + ' (o desde la transacción asignada, si existe).');
+      const oblig = A.selScreen.filter(x => /OBLIGATORY/i.test(x.detalle));
+      if (oblig.length) g.push('Campos obligatorios de la pantalla de selección: ' + oblig.map(x => C(x.nombre)).join(', ') + '. Crear una variante con datos válidos.');
+      g.push('Activar el objeto y ejecutar el chequeo de sintaxis, Code Inspector (' + C('SCI') + ') / ATC antes de transportar.');
+      p(lista(g));
+      const t = [['Camino feliz', 'Ejecutar con datos válidos', 'Resultado esperado según la lógica del programa']];
+      oblig.forEach(x => t.push(['Parámetro obligatorio vacío', 'Dejar ' + C(x.nombre) + ' sin valor', 'Mensaje de campo obligatorio']));
+      uniq(A.auth.map(a => a.objeto)).forEach(ob => t.push(['Sin autorización', 'Usuario sin el objeto ' + C(ob), 'Mensaje de error y finalización controlada']));
+      if (A.leidas.size) t.push(['Sin datos', 'Selección que no devuelva registros en ' + [...A.leidas].slice(0, 3).map(C).join(', '), 'Mensaje informativo, sin cortes']);
+      if (A.fms.some(f => f.params.EXPORTING && f.params.EXPORTING.some(x => /^testrun$/i.test(x)))) t.push(['Simulación', 'Ejecutar con TESTRUN activo', 'Sin grabación en base de datos']);
+      if (A.fms.some(f => /^BAPI_/i.test(f.nombre))) t.push(['Error de BAPI', 'Provocar un mensaje E/A en RETURN', 'ROLLBACK y mensaje al usuario']);
+      p('\n**Casos de prueba sugeridos (derivados del análisis estático):**\n');
+      p(tabla(['Caso', 'Acción', 'Resultado esperado'], t));
+
+      if (o.anexo) {
+        p('\n## Anexo A. Observaciones de calidad y riesgos\n');
+        const orden = { Alta: 0, Media: 1, Baja: 2 };
+        const av = [...A.avisos].sort((a, b) => orden[a.sev] - orden[b.sev]);
+        p(av.length ? tabla(['Severidad', 'Observación'], av.map(a => [a.sev, a.txt])) : 'El análisis estático no detectó observaciones.\n');
+        p('\n_Heurísticas automáticas: pueden existir falsos positivos o negativos. Validar con Code Inspector / ATC._\n');
+      }
+      return L.join('\n');
+    }
+
+    function docLocalGenerico(G, o) {
+      const L = [], p = t => L.push(t);
+      p('# Documentación técnica — ' + o.name + '\n');
+      p('> **Modo local (análisis estático, sin IA).** Generado el ' + new Date().toLocaleDateString('es-AR') + '. Refleja solo lo que surge literalmente del código.\n');
+      p('## 1. Encabezado o ficha técnica del archivo\n');
+      p(tabla(['Campo', 'Valor'], [['Archivo / módulo', C(o.name)], ['Lenguaje', LANG_LABEL[o.lang]], ['Propósito', ND], ['Contexto adicional', o.ctx || '—'], ['Tamaño', o.lineas + ' líneas']]));
+      p('\n## 2. Control de versiones e historial de cambios\n');
+      p(ND + (o.ctx ? ' Referencia indicada por el usuario: ' + o.ctx : '') + '\n');
+      p('\n## 3. Definición de dependencias e importaciones\n');
+      const dep = G.imports.map(i => ['Importación', C(i)]).concat(G.tablas.map(t => ['Tabla', C(t)]));
+      p(dep.length ? tabla(['Tipo', 'Nombre'], dep) : 'No se detectaron dependencias.\n');
+      p('\n## 4. Arquitectura y estructura del código\n');
+      p('- Funciones: ' + G.funciones.length + ' · Clases: ' + G.clases.length + (G.clases.length ? ' (' + G.clases.map(C).join(', ') + ')' : '') + '\n');
+      p('\n## 5. Documentación de API interna\n');
+      p(G.funciones.length ? tabla(['Función', 'Firma'], G.funciones.map(f => [C(f.split('(')[0]), C(f)])) : 'No se detectaron funciones.\n');
+      p('\n## 6. Variables, constantes y entorno\n');
+      p(G.env.length ? 'Variables de entorno utilizadas:\n\n' + lista(G.env.map(C)) : 'No se detectaron variables de entorno.\n');
+      p('\n## 7. Manejo de errores y logs\n');
+      p(lista(['Bloques try: ' + G.err.try, 'Captura de excepciones (catch / except): ' + G.err.catchexc, 'Lanzamiento de errores (throw / raise): ' + G.err.lanza, 'Sentencias de log / consola: ' + G.err.log]));
+      p('\n## 8. Guía de compilación, despliegue y pruebas\n');
+      p(ND + '\n');
+      if (o.anexo) {
+        p('\n## Anexo A. Observaciones de calidad y riesgos\n');
+        p(G.todos.length ? 'Marcas pendientes encontradas:\n\n' + lista(G.todos.map(C)) : 'El análisis estático no detectó observaciones.\n');
+      }
+      return L.join('\n');
+    }
+
+    function generarDocLocal(o) {
+      if (o.lang === 'abap') { const A = analizarABAP(o.code, o.release), cab = abapCabecera(o.code); return docLocalABAP(A, cab, o); }
+      return docLocalGenerico(analizarGenerico(o.code, o.lang), o);
+    }
+
+    /* =====================================================================
+     *  PROMPTS PARA GEMINI
+     * ===================================================================== */
+    function armarPrompts(o) {
+      const F = '\u0060\u0060\u0060';
+      const sys = [
+        'Eres un Líder Técnico y Arquitecto de Software senior. Redactas documentación técnica formal de código fuente, en español neutro profesional.',
+        '',
+        'REGLAS GENERALES',
+        '- Básate estrictamente en el código y en el contexto provistos. No inventes autores, fechas, versiones, tickets, tablas, parámetros ni comportamientos. Si un dato no surge de ellos, escribe exactamente: "' + ND + '"',
+        '- Responde solo con el documento en Markdown: sin saludo, sin comentarios finales y sin envolver todo el documento en un bloque de código.',
+        '- Empieza con un título de nivel 1: "# Documentación técnica — <nombre>".',
+        '- Usa exactamente estos ocho encabezados de nivel 2, en este orden y con esta numeración:',
+        '  ## 1. Encabezado o ficha técnica del archivo',
+        '  ## 2. Control de versiones e historial de cambios',
+        '  ## 3. Definición de dependencias e importaciones',
+        '  ## 4. Arquitectura y estructura del código',
+        '  ## 5. Documentación de API interna',
+        '  ## 6. Variables, constantes y entorno',
+        '  ## 7. Manejo de errores y logs',
+        '  ## 8. Guía de compilación, despliegue y pruebas',
+        '- Usa tablas Markdown para dependencias, parámetros, variables y pantallas de selección; usa formato de código en línea para identificadores.',
+        '- Sé exhaustivo en la sección 5: documenta todas las rutinas, métodos y funciones del código, sin omitir ninguna.',
+        '- Si se incluyen "hallazgos del análisis estático automático", tómalos como datos verificados y complétalos o corrígelos con tu lectura del código.'
+      ];
+      if (o.lang === 'abap') {
+        sys.push('', 'REGLAS ESPECÍFICAS PARA ABAP (release objetivo: ' + RELEASE_LABEL[o.release] + ')',
+          '1. Ficha técnica: tipo de objeto (report ejecutable, include, grupo de funciones / módulo de función, clase global o local, module pool), nombre, transacción si surge, propósito funcional y módulo SAP (SD, MM, FI…), autor/fecha/ticket SOLO si figuran en el encabezado.',
+          '2. Historial: transcribe en una tabla el historial de cambios del encabezado (fecha, autor, ticket/OSS/transporte, descripción) y las marcas de modificación del código si existen.',
+          '3. Dependencias: tabla con INCLUDEs, tablas transparentes estándar y Z (indicando lectura o escritura), módulos de función y BAPIs (RFC, UPDATE TASK, BACKGROUND TASK), clases e interfaces, SUBMIT / CALL TRANSACTION, objetos de autorización y tablas de parametrización (TVARVC, tablas Z).',
+          '4. Arquitectura: tipo de programa, eventos ABAP en orden de ejecución (LOAD-OF-PROGRAM, INITIALIZATION, AT SELECTION-SCREEN, START-OF-SELECTION, END-OF-SELECTION, eventos de lista), flujo paso a paso con las rutinas (PERFORM / métodos), pantalla de selección y tipo de salida (ALV, WRITE, archivo, formulario).',
+          '5. API interna: por cada FORM, método, módulo de función o módulo PBO/PAI, la firma completa (USING/CHANGING/TABLES o IMPORTING/EXPORTING/CHANGING/RETURNING/EXCEPTIONS) con tipos, y qué hace. Usa tablas.',
+          '6. Variables: pantalla de selección (PARAMETERS / SELECT-OPTIONS con tipo, obligatoriedad y valor por defecto), constantes (valor y significado), tipos y estructuras globales, tablas internas globales, field-symbols y variables de sistema usadas (sy-uname, sy-datum…). Distingue globales de locales.',
+          '7. Errores y logs: tratamiento de sy-subrc, EXCEPTIONS, TRY/CATCH, clases y tipos de MESSAGE (E/W/I/S/A/X), tabla RETURN de BAPIs (BAPIRET2: indica si se evalúan los tipos E y A), COMMIT/ROLLBACK, Application Log (SLG1) y bloqueos (ENQUEUE/DEQUEUE).',
+          '8. Guía: cómo ejecutar (SE38/SA38/transacción), variantes de selección, escenarios de prueba positivos y negativos, ABAP Unit / ATC / Code Inspector, transportes, consideraciones de rendimiento y de autorizaciones, ejecución en segundo plano.',
+          'Documenta con la sintaxis del release objetivo. Si el código usa sintaxis no disponible en ese release, indícalo en el anexo.');
+      } else {
+        sys.push('', 'GUÍA PARA ' + LANG_LABEL[o.lang].toUpperCase(),
+          'Adapta los ocho puntos al lenguaje: dependencias = imports / paquetes / tablas; API interna = funciones, clases y métodos con parámetros, tipos, retorno y excepciones; entorno = variables de entorno y configuración; guía = instalación, ejecución, pruebas unitarias y despliegue.');
+      }
+      sys.push('', o.anexo
+        ? 'Al final agrega "## Anexo A. Observaciones de calidad y riesgos" con una tabla (Severidad: Alta/Media/Baja, Ubicación, Observación, Recomendación). Revisa rendimiento, manejo de errores, seguridad, autorizaciones, hardcodeos y sintaxis obsoleta.'
+        : 'No agregues secciones adicionales a las ocho indicadas.');
+
+      let resumen = '';
+      if (o.lang === 'abap') { const A = analizarABAP(o.code, o.release), cab = abapCabecera(o.code); resumen = resumenEstatico(A, cab); }
+      const user = [
+        'Nombre del archivo/programa: ' + o.name,
+        'Lenguaje: ' + LANG_LABEL[o.lang] + (o.lang === 'abap' ? ' (release objetivo: ' + RELEASE_LABEL[o.release] + ')' : ''),
+        'Contexto adicional del usuario: ' + (o.ctx || '(sin contexto adicional)'),
+        resumen ? '\nHallazgos del análisis estático automático:\n' + resumen : '',
+        '\nCódigo fuente:\n' + F + '\n' + o.code + '\n' + F
+      ].filter(x => x !== '').join('\n');
+      return { system: sys.join('\n'), user };
+    }
+
+    /* =====================================================================
+     *  LLAMADA A GEMINI
+     * ===================================================================== */
+    async function llamarGemini({ key, model, system, user, signal }) {
+      const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent';
+      const maxOut = /^gemini-(?:3|2\.5|flash-latest|pro-latest)/.test(model) ? 32768 : 8192;
+      const res = await fetch(url, {
+        method: 'POST', signal,
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: system }] },
+          contents: [{ role: 'user', parts: [{ text: user }] }],
+          generationConfig: { maxOutputTokens: maxOut }
+        })
+      });
+      let data = null;
+      try { data = await res.json(); } catch { /* respuesta sin JSON */ }
+      if (!res.ok) { const e = new Error((data && data.error && data.error.message) || ('HTTP ' + res.status)); e.status = res.status; throw e; }
+      if (data && data.promptFeedback && data.promptFeedback.blockReason) throw new Error('La solicitud fue bloqueada por el filtro del modelo (' + data.promptFeedback.blockReason + ').');
+      const cand = data && data.candidates && data.candidates[0];
+      const parts = (cand && cand.content && cand.content.parts) || [];
+      const text = parts.filter(x => !x.thought && typeof x.text === 'string').map(x => x.text).join('').trim();
+      if (!text) throw new Error('El modelo no devolvió texto' + (cand && cand.finishReason ? ' (finishReason: ' + cand.finishReason + ')' : '') + '.');
+      return { text, truncado: !!cand && cand.finishReason === 'MAX_TOKENS' };
+    }
+
+    function describirError(e) {
+      if (e && e.name === 'AbortError') return 'la consulta superó el tiempo máximo.';
+      const m = String((e && e.message) || e);
+      if (e.status === 400 && /API key/i.test(m)) return 'la API Key no es válida. Revisala en la configuración.';
+      if (e.status === 404) return 'el modelo seleccionado no existe o fue dado de baja (' + m + '). Elegí otro o usá “Otro modelo…”.';
+      if (e.status === 403) return 'la API Key no tiene permiso para este modelo o región: ' + m;
+      if (e.status === 429) return 'se superó la cuota o el límite de solicitudes. Esperá un momento o revisá tu plan.';
+      if (e.status >= 500) return 'el servicio de Gemini no está disponible ahora (HTTP ' + e.status + ').';
+      if (e instanceof TypeError) return 'no se pudo conectar con la API (red, bloqueo del navegador o extensión).';
+      return m;
+    }
+
+    function desenvolverMarkdown(t) {
+      const m = t.match(/^\s*```(?:markdown|md)?\s*\n([\s\S]*?)\n```\s*$/i);
+      return m ? m[1] : t;
+    }
+
+    /* =====================================================================
+     *  VISOR, TABS, COPIAR Y DESCARGAR
+     * ===================================================================== */
+    const estado = { doc: '', nombre: '', vista: 'render' };
+
+    function setVista(v) {
+      estado.vista = v;
+      docRender.classList.toggle('hidden', v !== 'render' || !estado.doc);
+      docRaw.classList.toggle('hidden', v !== 'raw' || !estado.doc);
+      btnVista.className = 'px-2.5 py-1 ' + (v === 'render' ? 'bg-indigo-600/30 text-indigo-200' : 'text-gray-400 hover:text-white');
+      btnRaw.className = 'px-2.5 py-1 ' + (v === 'raw' ? 'bg-indigo-600/30 text-indigo-200' : 'text-gray-400 hover:text-white');
+    }
+    function mostrarDoc(md, name) {
+      estado.doc = md; estado.nombre = name;
+      docPlaceholder.classList.add('hidden');
+      docActions.classList.remove('hidden');
+      docRender.innerHTML = renderMarkdown(md);
+      docRaw.textContent = md;
+      setVista(estado.vista);
+      mostrarTab('doc');
+      viewDoc.parentElement.scrollTop = 0;
+    }
+    btnVista.addEventListener('click', () => setVista('render'));
+    btnRaw.addEventListener('click', () => setVista('raw'));
+
+    function mostrarTab(t) {
+      const on = 'px-3 py-1.5 rounded-md text-xs font-medium transition flex items-center gap-1.5 bg-indigo-600/20 text-indigo-400 border border-indigo-500/30';
+      const off = 'px-3 py-1.5 rounded-md text-xs font-medium transition flex items-center gap-1.5 text-gray-400 hover:text-white border border-transparent';
+      tabDoc.className = t === 'doc' ? on : off;
+      tabHistorial.className = t === 'hist' ? on : off;
+      viewDoc.classList.toggle('hidden', t !== 'doc');
+      viewHistorial.classList.toggle('hidden', t !== 'hist');
+    }
+    tabDoc.addEventListener('click', () => mostrarTab('doc'));
+    tabHistorial.addEventListener('click', () => mostrarTab('hist'));
+
+    async function copiar(md) {
+      try { await navigator.clipboard.writeText(md); notify('Copiado al portapapeles.', 'success'); return; } catch { /* intenta alternativa */ }
+      const ta = document.createElement('textarea');
+      ta.value = md; ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
+      document.body.appendChild(ta); ta.select();
+      let ok = false;
+      try { ok = document.execCommand('copy'); } catch { /* noop */ }
+      ta.remove();
+      notify(ok ? 'Copiado al portapapeles.' : 'No se pudo copiar. Usá la vista Markdown y copiá manualmente.', ok ? 'success' : 'error');
+    }
+    function descargar(nameBase, md) {
+      const base = (nameBase || 'documentacion').replace(/\.[^.]+$/, '').replace(/[^\w.-]+/g, '_') || 'documentacion';
+      const url = URL.createObjectURL(new Blob([md], { type: 'text/markdown;charset=utf-8' }));
+      const a = document.createElement('a');
+      a.href = url; a.download = base + '_doc.md';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
+    }
+    $('btnCopy').addEventListener('click', () => estado.doc && copiar(estado.doc));
+    $('btnDownload').addEventListener('click', () => estado.doc && descargar(estado.nombre, estado.doc));
+
+    /* =====================================================================
+     *  HISTORIAL
+     * ===================================================================== */
+    let historial = readJSON(K_HIST, []);
+    if (!Array.isArray(historial)) historial = [];
+    historial = historial.filter(h => h && typeof h.doc === 'string').slice(0, MAX_HIST);
+
+    function guardarHistorial() {
+      let descartados = 0;
+      for (;;) {
+        if (store.set(K_HIST, JSON.stringify(historial))) return descartados;
+        if (historial.length <= 1) { return -1; }
+        historial.pop(); descartados++;
+      }
+    }
+    function fechaLinda(iso) {
+      const d = new Date(iso);
+      return isNaN(d) ? '' : d.toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' });
+    }
+    function renderHistorial() {
+      historialCount.textContent = historial.length;
+      btnClearHist.classList.toggle('hidden', !historial.length);
+      historialContainer.innerHTML = '';
+      if (!historial.length) { historialContainer.appendChild(el('p', 'text-xs text-gray-500 text-center py-6', 'No hay registros guardados.')); return; }
+      historial.forEach(item => {
+        const card = el('div', 'bg-gray-900/60 border border-gray-800 rounded-lg p-3');
+        const top = el('div', 'flex flex-wrap justify-between items-start gap-2 mb-2');
+        const left = el('div', 'flex items-center gap-2 min-w-0');
+        left.appendChild(el('span', 'font-mono text-xs text-indigo-400 font-bold truncate', item.file || 'sin_nombre'));
+        left.appendChild(el('span', 'text-[10px] rounded px-1.5 py-0.5 border ' + (item.origen === 'ia' ? 'border-indigo-500/40 text-indigo-300 bg-indigo-500/10' : 'border-gray-600 text-gray-400 bg-gray-800'), item.origen === 'ia' ? 'IA' + (item.modelo ? ' · ' + item.modelo : '') : 'Local'));
+        top.appendChild(left);
+        top.appendChild(el('span', 'text-[10px] text-gray-500', fechaLinda(item.date)));
+        card.appendChild(top);
+        card.appendChild(el('p', 'text-[11px] text-gray-400 bg-gray-950 p-2 rounded line-clamp-2 break-words', item.doc.replace(/[#>*`|_-]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 180) + '…'));
+        const acts = el('div', 'flex gap-3 mt-2 text-[11px]');
+        const bAbrir = el('button', 'text-indigo-400 hover:text-indigo-300 underline', 'Abrir'); bAbrir.type = 'button';
+        const bMd = el('button', 'text-gray-400 hover:text-white underline', 'Descargar .md'); bMd.type = 'button';
+        const bDel = el('button', 'text-red-400 hover:text-red-300 underline', 'Eliminar'); bDel.type = 'button';
+        bAbrir.addEventListener('click', () => {
+          nombre.value = item.file || ''; editor.value = item.code || ''; langSel.value = 'auto'; limpiarChips();
+          actualizarContador(); refrescarLang(); mostrarDoc(item.doc, item.file);
+          notify('Se cargaron el código y la documentación del historial.', 'info');
+        });
+        bMd.addEventListener('click', () => descargar(item.file, item.doc));
+        bDel.addEventListener('click', () => { historial = historial.filter(h => h.id !== item.id); guardarHistorial(); renderHistorial(); });
+        acts.append(bAbrir, bMd, bDel);
+        card.appendChild(acts);
+        historialContainer.appendChild(card);
+      });
+    }
+    btnClearHist.addEventListener('click', () => {
+      if (!confirm('¿Borrar todo el historial de documentaciones de este navegador?')) return;
+      historial = []; guardarHistorial(); renderHistorial();
+    });
+
+    /* =====================================================================
+     *  FLUJO PRINCIPAL
+     * ===================================================================== */
+    let ctrl = null, cancelado = false, tickTimer = null;
+
+    function setBusy(b) {
+      btnAnalizar.disabled = b; btnLocal.disabled = b;
+      btnCancelar.classList.toggle('hidden', !b);
+      clearInterval(tickTimer);
+      if (b) {
+        const t0 = Date.now();
+        const tick = () => { btnAnalizarText.textContent = 'Procesando… ' + Math.floor((Date.now() - t0) / 1000) + ' s'; };
+        tick(); tickTimer = setInterval(tick, 1000);
+      } else btnAnalizarText.textContent = 'Analizar y generar documentación';
+    }
+    btnCancelar.addEventListener('click', () => { cancelado = true; if (ctrl) ctrl.abort(); });
+
+    async function analizar(modo) {
+      const code = editor.value.replace(/\s+$/, '');
+      if (!code.trim()) { notify('Ingresá o cargá código fuente primero.', 'warning'); return; }
+      const o = {
+        name: nombre.value.trim() || 'sin_nombre', ctx: contexto.value.trim(), lang: langEfectivo(), release: releaseSel.value,
+        anexo: chkAnexo.checked, code, lineas: code.split('\n').length
+      };
+      if (code.length > WARN_CHARS) notify('El código es muy extenso (' + code.length.toLocaleString('es-AR') + ' caracteres): la IA puede truncar o fallar. Considerá dividirlo.', 'warning');
+
+      cancelado = false; setBusy(true);
+      let doc = '', origen = 'local', modelo = '', truncado = false, motivo = '';
+      try {
+        if (modo === 'ia') {
+          const key = obtenerKey(), model = modeloActual();
+          if (!key) motivo = 'no hay API Key configurada.';
+          else if (!model) motivo = 'el nombre del modelo no es válido.';
+          else {
+            ctrl = new AbortController();
+            const to = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
+            try {
+              const { system, user } = armarPrompts(o);
+              const r = await llamarGemini({ key, model, system, user, signal: ctrl.signal });
+              doc = desenvolverMarkdown(r.text); truncado = r.truncado; origen = 'ia'; modelo = model;
+            } catch (e) {
+              if (cancelado) { notify('Análisis cancelado.', 'info'); return; }
+              motivo = describirError(e).replace(/^([A-ZÁÉÍÓÚ])(?![A-Z])/, c => c.toLowerCase());
+            } finally { clearTimeout(to); ctrl = null; }
+          }
+        }
+        if (!doc) doc = generarDocLocal(o);
+        if (truncado) doc += '\n\n> ⚠️ **Respuesta truncada** por el límite de salida del modelo. Dividí el código en partes más chicas o usá un modelo con más capacidad.\n';
+
+        historial.unshift({ id: Date.now(), file: o.name, lang: o.lang, origen, modelo, date: new Date().toISOString(), doc, code });
+        historial = historial.slice(0, MAX_HIST);
+        const desc = guardarHistorial();
+        renderHistorial();
+        mostrarDoc(doc, o.name);
+
+        if (desc === -1) notify('Documentación generada, pero no se pudo guardar en el historial (almacenamiento lleno).', 'warning');
+        else if (desc > 0) notify('Documentación generada. Se eliminaron ' + desc + ' registro(s) antiguo(s) del historial por falta de espacio.', 'warning');
+        else if (origen === 'ia') notify(truncado ? 'Documentación generada con IA, pero la respuesta se truncó.' : '¡Documentación generada con ' + modelo + '!', truncado ? 'warning' : 'success');
+        else if (modo === 'ia') notify('No se usó IA porque ' + motivo + ' Se generó el análisis estático local.', 'warning');
+        else notify('Análisis estático local generado (sin IA).', 'success');
+      } catch (e) {
+        console.error(e);
+        notify('Error inesperado al generar la documentación: ' + (e && e.message ? e.message : e), 'error');
+      } finally { setBusy(false); }
+    }
+    btnAnalizar.addEventListener('click', () => analizar('ia'));
+    btnLocal.addEventListener('click', () => analizar('local'));
+
+    /* =====================================================================
+     *  INICIO
+     * ===================================================================== */
+    aplicarAjustes();
+    actualizarKeyUI();
+    renderHistorial();
+    actualizarContador();
+    refrescarLang();
+    mostrarTab('doc');
+    if (window.lucide) window.lucide.createIcons();
+  })();
+  </script>
+</body>
+</html>
